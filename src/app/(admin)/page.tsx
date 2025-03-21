@@ -21,7 +21,7 @@ export default function Ecommerce() {
         <TractorDetails Heading1="Tractor Number" Heading2="Trips Done" Value1="HR51 B 5643" Value2="10" />
       </div>
       <div className="col-span-12 xl:col-span-6">
-        <TractorDetails Heading1="Tractor Number" Heading2="Trips Done" Value1="HR51 B 5643" Value2="10" />
+        <TractorDetails Heading1="Driver Name" Heading2="Choosen Trip" Value1="Manpreet Singh" Value2="2" />
       </div>
 
       {/* Date Picker & Select in One Row */}
@@ -58,10 +58,10 @@ export default function Ecommerce() {
 
       {/* Demographics & Orders */}
       <div className="col-span-12 xl:col-span-5">
-        <DemographicCard />
+        {/* <DemographicCard /> */}
       </div>
       <div className="col-span-12 xl:col-span-7">
-        <RecentOrders />
+        {/* <RecentOrders /> */}
       </div>
     </div>
   );
