@@ -11,6 +11,9 @@ import Select from "@/components/form/Select";
 import Flatpickr from "react-flatpickr";
 import 'flatpickr/dist/themes/material_blue.css';
 import LiveMap from "@/components/map/LiveMap";
+import dis from "../../../public/images/icons8-route-64.png"
+import loc from "../../../public/images/icons8-navigation-64.png"
+import GraphData from "@/components/graph/GraphData";
 
 export default function Ecommerce() {
   return (
@@ -47,18 +50,16 @@ export default function Ecommerce() {
               defaultValue=""
             />
           </div>
-        </div>
-      </div>
+          
 
-      {/* Full-Width Statistics Chart */}
-      <div className="col-span-6">
-        {/* <StatisticsChart /> */}
+        </div>
+        <div className="col-span-6  mt-5">
         <LiveMap/>
       </div>
-
+      </div>
       {/* Demographics & Orders */}
-      <div className="col-span-12 xl:col-span-5">
-        {/* <DemographicCard /> */}
+      <div className="col-span-12 xl:col-span-6">
+        <GraphData />
       </div>
       <div className="col-span-12 xl:col-span-7">
         {/* <RecentOrders /> */}

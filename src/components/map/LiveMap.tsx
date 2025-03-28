@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import tractorImg from "../tractorImg.svg"
 // Import Leaflet styles
+import dis from "../../../public/images/icons8-route-64.png"
+import loc from "../../../public/images/icons8-navigation-64.png"
 import "leaflet/dist/leaflet.css";
 
 
@@ -28,7 +30,7 @@ const UpdateMapView = ({ position }) => {
 };
 
 const LiveMap = () => {
-  const [positions, setPositions] = useState([]); // Default: Nashik
+  const [positions, setPositions] = useState<number[][]>([]); // Default: Nashik
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080"); // Change to your WebSocket server
@@ -71,6 +73,90 @@ const LiveMap = () => {
   const latestPosition = positions.length > 0 ? positions[0] : [19.9975, 73.7898];
 
   return (
+ <div>
+     <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', gap: '20px', marginTop: '20px', flexWrap: 'wrap', marginBottom:'20px' }}>
+            <div style={{
+              backgroundColor: '#E3F5FF',
+              borderRadius: '8px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', maxWidth: '190px', margin: '0 auto',
+              flex: '1 1 calc(20% - 20px)', // Makes each box take up 1/3 of the space when there's enough room
+              minWidth: '150px' // Prevents the boxes from shrinking too small on small screens
+            }}>
+              <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%'   }}>Distance travelled</p>
+              <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'row', 
+                  gap: '30px', 
+                  justifyContent: 'center',
+                  alignItems: 'center', 
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'row',
+                    gap:"5px" 
+                  }}>
+                    <img src={dis.src} alt="Image" style={{ height: "30px" }} />
+                    <p style={{ color: '#4186E5', fontSize: '22px'}}>24 KM</p>
+                   
+                  </div>
+                </div>
+                <p style={{fontSize: "11px", margin:"3px"}}>Today's total : 104 km</p>
+ 
+            </div>
+
+            <div style={{
+              backgroundColor: '#E3F5FF',
+              borderRadius: '8px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', maxWidth: '190px', margin: '0 auto',
+              flex: '1 1 calc(20% - 20px)', // Makes each box take up 1/3 of the space when there's enough room
+              minWidth: '150px' // Prevents the boxes from shrinking too small on small screens
+            }}>
+              <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%'   }}>Hours tested</p>
+              <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'row', 
+                  gap: '30px', 
+                  justifyContent: 'center',
+                  alignItems: 'center', 
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'row', 
+                    gap: '10px' 
+                  }}>
+                    <p style={{ color: '#4186E5', fontSize: '22px'}}>06:31:54</p>
+                    {/* <p style={{ fontWeight: 'bold', color: 'Black', fontSize: '22px' }}>KM</p> */}
+                  </div>
+                </div>
+                <p style={{fontSize: "11px", margin:"3px"}}>Today's total : 7Hrs</p>
+ 
+            </div>
+
+            <div style={{
+              backgroundColor: '#E3F5FF',
+              borderRadius: '8px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', maxWidth: '190px', margin: '0 auto',
+              flex: '1 1 calc(20% - 20px)', // Makes each box take up 1/3 of the space when there's enough room
+              minWidth: '150px' // Prevents the boxes from shrinking too small on small screens
+            }}>
+              <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%'   }}>Live location</p>
+              <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'row', 
+                  gap: '30px', 
+                  justifyContent: 'center',
+                  alignItems: 'center', 
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'row', 
+                    gap: '5px' 
+                  }}>
+                    <img src={loc.src} alt="Image" style={{ height: "27px" , marginTop:"4px"}} />
+                    <p style={{ color: '#4186E5', fontSize: '22px'}}>Faridabad</p>
+                  </div>
+                </div>
+                <p style={{fontSize: "11px", margin:"3px"}}>28.4089° N, 77.3178° E</p>
+            </div>
+            
+          </div>
     <Map center={latestPosition} zoom={20} style={{ height: "500px", width: "100%" }}>
       <TileLayerComp url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <UpdateMapView position={latestPosition} />
@@ -86,6 +172,7 @@ const LiveMap = () => {
         <PolylineComp positions={positions} color="blue" weight={3} />
       )}
     </Map>
+ </div>
   );
 };
 
