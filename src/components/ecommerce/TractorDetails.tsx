@@ -29,18 +29,7 @@ export const TractorDetails = (props: TractorDetails) => {
       {/* <!-- Metric Item End --> */}
 
       {/* <!-- Metric Item Start --> */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-white/[0.03] md:p-4">
-        <div>
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {props?.Heading2}
-            </span>
-            <h4 className="font-bold text-gray-800 text-xl dark:text-white/90">
-              {props?.Value2}
-            </h4>
-          </div>
-        </div>
-      </div>
+     
       {/* <!-- Metric Item End --> */}
     </div>
   );

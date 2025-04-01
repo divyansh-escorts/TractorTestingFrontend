@@ -1,140 +1,150 @@
-import React, { PureComponent } from 'react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  Brush,
-  AreaChart,
-  Area,
-  ResponsiveContainer,
-} from 'recharts';
+  import React, { useState, useEffect } from 'react';
+  import {
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Brush, AreaChart, Area, ResponsiveContainer
+  } from 'recharts';
 
-const data = [
-  {
-    name: 'Page A',
-    fuel: 4000,
-    speed: 2400,
-    RPM: 2400,
-  },
-  {
-    name: 'Page B',
-    fuel: 3000,
-    speed: 1398,
-    RPM: 2210,
-  },
-  {
-    name: 'Page C',
-    fuel: 2000,
-    speed: 9800,
-    RPM: 2290,
-  },
-  {
-    name: 'Page D',
-    fuel: 2780,
-    speed: 3908,
-    RPM: 2000,
-  },
-  {
-    name: 'Page E',
-    fuel: 1890,
-    speed: 4800,
-    RPM: 2181,
-  },
-  {
-    name: 'Page F',
-    fuel: 2390,
-    speed: 3800,
-    RPM: 2500,
-  },
-  {
-    name: 'Page G',
-    fuel: 3490,
-    speed: 4300,
-    RPM: 2100,
-  },
-];
+  interface WebSocketData {
+    DEVICE_ID: string;
+    TIME: string;
+    FUEL_LEVEL: string;
+    SPEED: string;
+    ENGINE_RPM: string;
+  }
 
-export default class GraphData extends PureComponent {
-//   static demoUrl = 'https://codesandbox.io/p/sandbox/synchronized-line-charts-37rhmf';
+  interface ChartData {
+    name: string;
+    DEVICE_ID: string;
+    FUEL_LEVEL: number;
+    SPEED: number;
+    ENGINE_RPM: number;
+  }
 
-  render() {
+  interface _Data {
+    TIME: string;
+    DEVICE_ID: string;
+    LATITUDE:string;
+    LONGITUDE:string
+    FUEL_LEVEL: string;
+    SPEED: string;
+    ENGINE_RPM: string;
+  }
+
+  interface GraphDataProps {
+    newData: _Data | null; // Assuming it expects a `data` prop
+  }
+
+  const GraphData: React.FC<GraphDataProps> = ({ newData }) => {
+    const [data, setData] = useState<ChartData[]>([]);
+    const [brushIndices, setBrushIndices] = useState<{ startIndex: number, endIndex: number }>({ startIndex: 0, endIndex: 20 });
+
+    useEffect(() => {
+      try{
+        console.log(newData)
+        if(newData){
+          setData((prevData) => {
+              const updatedData = [
+                ...prevData,
+                {
+                  TIME: new Date().toLocaleTimeString(),
+                  name: new Date().toLocaleTimeString(),
+                  DEVICE_ID: newData.DEVICE_ID,
+                  FUEL_LEVEL: parseFloat(newData.FUEL_LEVEL),
+                  SPEED: parseFloat(newData.SPEED),
+                  ENGINE_RPM: parseFloat(newData.ENGINE_RPM),
+                },
+              ];
+              console.log(updatedData)
+              return updatedData;
+            });
+        }
+      }
+      catch(err){
+        console.log(err)
+      }
+    },[newData])  
+
+    // Handle Brush changes with optional startIndex and endIndex
+    const handleBrushChange = (newIndex: { startIndex?: number; endIndex?: number }) => {
+      setBrushIndices({
+        startIndex: newIndex.startIndex ?? 0, // Use fallback if undefined
+        endIndex: newIndex.endIndex ?? 20,   // Use fallback if undefined
+      });
+    };
+
     return (
       <div style={{ width: '100%' }}>
-
-        <h2 style={{fontSize:'25px', color:'gray'}}>Fuel Level-79%</h2>
-
-        <ResponsiveContainer width="100%" height={200} style={{marginBottom:'20px'}}>
-          <LineChart
-            width={500}
-            height={200}
-            data={data}
-            syncId="anyId"
-            margin={{
-              top: 10,
-              right: 30,
-              left: 0,
-              bottom: 0,
-            }}
-          >
+        <h2 style={{ fontSize: '25px', color: 'gray' }}>Fuel Level</h2>
+        <ResponsiveContainer width="100%" height={200} style={{ marginBottom: '20px' }}>
+          <LineChart data={data} syncId="fuelChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
+            <XAxis dataKey="TIME" />
+            <YAxis
+              label={{ value: 'Fuel (%)', angle: -90, position: 'insideLeft' }}
+              domain={[0, 100]}
+              tickCount={6}
+            />
             <Tooltip />
-            <Line type="monotone" dataKey="fuel" stroke="#8884d8" fill="#8884d8" />
-          </LineChart>
-        </ResponsiveContainer>
-        <h2 style={{fontSize:'25px', color:'gray'}}>Speed-38km/h</h2>
-        <ResponsiveContainer width="100%" height={200} style={{marginBottom:'20px'}}>
-          <LineChart
-            width={500}
-            height={200}
-            data={data}
-            syncId="anyId"
-            margin={{
-              top: 10,
-              right: 30,
-              left: 0,
-              bottom: 0,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="speed" stroke="#82ca9d" fill="#82ca9d" />
-            
+            <Line
+              type="monotone"
+              dataKey="FUEL_LEVEL"
+              stroke="#8884d8"
+              fill="#8884d8"
+              isAnimationActive={false}
+              animationDuration={0}
+            />
           </LineChart>
         </ResponsiveContainer>
 
-        <h2 style={{fontSize:'25px', color:'gray'}}>RPM-2200</h2>
-        <ResponsiveContainer width="100%" height={200} style={{marginBottom:'20px'}}>
-          <AreaChart
-            width={500}
-            height={200}
-            data={data}
-            syncId="anyId"
-            margin={{
-              top: 10,
-              right: 30,
-              left: 0,
-              bottom: 0,
-            }}
-          >
+        <h2 style={{ fontSize: '25px', color: 'gray' }}>Speed</h2>
+        <ResponsiveContainer width="100%" height={200} style={{ marginBottom: '20px' }}>
+          <LineChart data={data} syncId="speedChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
+            <XAxis dataKey="TIME" />
+            <YAxis
+              label={{ value: 'Speed km/h', angle: -90, position: 'insideLeft' }}
+              domain={[0, 60]}
+              tickCount={6}
+            />
             <Tooltip />
-            <Area type="monotone" dataKey="speed" stroke="#82ca9d" fill="#82ca9d" />
-            <Brush 
-             height={20}
+            <Line
+              type="monotone"
+              dataKey="SPEED"
+              stroke="#82ca9d"
+              fill="#82ca9d"
+              isAnimationActive={false}
+              animationDuration={0}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+
+        <h2 style={{ fontSize: '25px', color: 'gray' }}>RPM</h2>
+        <ResponsiveContainer width="100%" height={200} style={{ marginBottom: '20px' }}>
+          <AreaChart data={data} syncId="rpmChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="TIME" />
+            <YAxis
+              label={{ value: 'RPM', angle: -90, position: 'insideLeft' }}
+              domain={[0, 3000]}
+              tickCount={6}
+            />
+            <Tooltip />
+            <Area
+              type="monotone"
+              dataKey="ENGINE_RPM"
+              stroke="#82ca9d"
+              fill="#82ca9d"
+              isAnimationActive={false}
+              animationDuration={0}
+            />
+            <Brush
+              height={20}
+              startIndex={brushIndices.startIndex} // Set the initial start index for the Brush
+              onChange={handleBrushChange} // Handle change in Brush position
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
     );
-  }
-}
+  };
+
+  export default GraphData;
