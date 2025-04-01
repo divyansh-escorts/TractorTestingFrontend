@@ -14,6 +14,7 @@ import LiveMap from "@/components/map/LiveMap";
 import dis from "../../../public/images/icons8-route-64.png"
 import loc from "../../../public/images/icons8-navigation-64.png"
 import GraphData from "@/components/graph/GraphData";
+import PathMap from "@/components/map/pathMap";
 
 interface Data {
   TIME: string;
@@ -27,12 +28,24 @@ interface Data {
 export default function Ecommerce() {
   const [newData, setNewData] = useState<Data>(Object);
   const[ date, setDate] = useState<string>('')
+  const [today, setToday] = useState(new Date().toISOString().split('T')[0]);
 
-  const handleDateChange = (date:any) => {
-    const selectedDate = new Date(date[0]).toLocaleString(); // Gets the first date from the array
-    console.log("Selected date:", selectedDate);
-    setDate(selectedDate)
+  const handleDateChange = (date: any) => {
+    const selectedDate = new Date(date[0]);  // Get the selected date
+    selectedDate.setDate(selectedDate.getDate() + 1);  // Increase by 1 day
+  
+    // Format the date as YYYY-MM-DD
+    const newDate = selectedDate.toISOString().split('T')[0]; 
+    
+    console.log(newDate);
+    setDate(newDate);  // Set the updated date
   };
+  
+  useEffect(() => {
+    // You can also check and update the date if necessary
+    setToday(new Date().toISOString().split('T')[0]);
+    console.log(new Date().toISOString().split('T')[0])
+  }, []);
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080"); // Change to your WebSocket server
@@ -48,12 +61,12 @@ export default function Ecommerce() {
         console.log(res)
         setNewData(res)
       } catch (error) {
-        console.error("Error parsing WebSocket data:", error);
+        console.log("Error parsing WebSocket data:", error);
       }
     };
 
     socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      console.log("WebSocket error:", error);
     };
 
     socket.onclose = () => {
@@ -96,7 +109,7 @@ export default function Ecommerce() {
       
 
       <div className="col-span-12  mt-5">
-        <LiveMap newData={newData}/>
+      {(date === today || !date) ? <LiveMap newData={newData} /> : <PathMap date={date} />}
         </div>
       {/* Demographics & Orders */}
       {/* <div className="col-span-12 xl:col-span-6">
