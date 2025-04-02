@@ -322,7 +322,7 @@ gap: '5px'
 <p style={{ color: '#4186E5', fontSize: '22px' }}>{location.slice(0,2).join(', ')}</p>
 </div>
 </div>
-<p style={{fontSize: "11px", margin:"3px"}}>{`${lat}}° N, {${long}`}° E</p>
+<p style={{fontSize: "11px", margin:"3px"}}>{`${lat}° N, ${long}° E`}</p>
 </div>
 </div>
 <Map center={positions[0]} zoom={20} style={{ height: "500px", width: "100%", marginTop:"20px" }}>

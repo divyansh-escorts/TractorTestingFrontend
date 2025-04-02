@@ -122,7 +122,7 @@ async function getLocationFromCoordinates(
     const fetchDetails = async () => {
       try {
        
-        const res = await axios.get(`http://localhost:3307/getData?date=${date}`);
+        const res = await axios.get(`https://tractortestingbackend-1.onrender.com/getData?date=${date}`);
         console.log(res)
         if(res.status==200){
           setData(res?.data?.result[0]?.data.slice(0, 100))
