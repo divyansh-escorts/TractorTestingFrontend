@@ -1,20 +1,16 @@
 "use client"
-import type { Metadata } from "next";
 import { TractorDetails } from "@/components/ecommerce/TractorDetails";
 import React, { useEffect, useState } from "react";
-import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
-import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
-import StatisticsChart from "@/components/ecommerce/StatisticsChart";
-import RecentOrders from "@/components/ecommerce/RecentOrders";
-import DemographicCard from "@/components/ecommerce/DemographicCard";
-import Select from "@/components/form/Select";
-import Flatpickr from "react-flatpickr";
+// import Flatpickr from "react-flatpickr";
 import 'flatpickr/dist/themes/material_blue.css';
-import LiveMap from "@/components/map/LiveMap";
-import dis from "../../../public/images/icons8-route-64.png"
-import loc from "../../../public/images/icons8-navigation-64.png"
-import GraphData from "@/components/graph/GraphData";
-import PathMap from "@/components/map/pathMap";
+// import LiveMap from "@/components/map/LiveMap";
+// import PathMap from "@/components/map/pathMap";
+import dynamic from "next/dynamic";
+
+
+const LiveMap = dynamic(() => import('@/components/map/LiveMap'), { ssr: false });
+const PathMap = dynamic(() => import('@/components/map/pathMap'), { ssr: false });
+const Flatpickr = dynamic(() => import('react-flatpickr'), { ssr: false });
 
 interface Data {
   TIME: string;
@@ -48,6 +44,7 @@ export default function Ecommerce() {
   }, []);
 
   useEffect(() => {
+    if(typeof window!=='undefined'){
     const socket = new WebSocket("ws://localhost:8080"); // Change to your WebSocket server
 
     socket.onopen = () => {
@@ -76,10 +73,8 @@ export default function Ecommerce() {
     return () => {
       socket.close();
     };
-  }, []);
-  if (typeof window === 'undefined') {
-    return null;  // Prevent rendering on the server-side
   }
+  }, []);
 
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">

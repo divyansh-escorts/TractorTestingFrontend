@@ -311,7 +311,7 @@ flexDirection: 'column'
 <Tooltip />
 <Area type="monotone" dataKey="ENGINE_RPM" stroke="#82ca9d" fill="#82ca9d" isAnimationActive={false} animationDuration={0} />
 <Brush height={20} startIndex={brushIndices.startIndex} onChange={handleBrushChange} />
-</AreaChart>
+  </AreaChart>
 </ResponsiveContainer>
 </div>
 </div>
