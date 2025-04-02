@@ -1,5 +1,5 @@
 "use client";
-
+// yahan tak code theek tha 
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -8,6 +8,7 @@ import tractorImg from "../tractorImg.svg"
 import dis from "../../../public/images/icons8-route-64.png"
 import loc from "../../../public/images/icons8-navigation-64.png"
 import L, { LatLngExpression, LatLngTuple } from 'leaflet';
+import speedImage from "../../../public/images/icons8-speed-24.png"
 import "leaflet/dist/leaflet.css";
 import {
 LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Brush, AreaChart, Area, ResponsiveContainer
@@ -74,37 +75,18 @@ return null;
   }
 };
 
-const LiveMap: React.FC<GraphDataProps> = ({ newData }) => {
+const LiveMap= () => {
 const [positions, setPositions] = useState<LatLngTuple[]>([]); // Default: Nashik
 const [center, setCenter] = useState<LatLngExpression>(); 
 const [data, setData] = useState<ChartData[]>([]);
 const [brushIndices, setBrushIndices] = useState<{ startIndex: number, endIndex: number }>({ startIndex: 0, endIndex: 20 });
+const [disPositions, setDisPositions] = useState<number[][]>([]);
+const [totalDistance, setTotalDistance] = useState<number>(0);
+const [location, setLocation] = useState<string[]>([]);  
+const [speed, setSpeed] = useState<number>(0); 
+const [lat, setLat] = useState<number>(0);
+const [long, setLong] = useState<number>(0);
 
-useEffect(() => {
-try{
-console.log(newData)
-if(newData){
-setData((prevData) => {
-const updatedData = [
-...prevData,
-{
-TIME: new Date().toLocaleTimeString(),
-name: new Date().toLocaleTimeString(),
-DEVICE_ID: newData.DEVICE_ID,
-FUEL_LEVEL: parseFloat(newData.FUEL_LEVEL),
-SPEED: parseFloat(newData.SPEED),
-ENGINE_RPM: parseFloat(newData.ENGINE_RPM),
-},
-];
-console.log(updatedData)
-return updatedData;
-});
-}
-}
-catch(err){
-console.log(err)
-}
-},[newData])
 
 // Handle Brush changes with optional startIndex and endIndex
 const handleBrushChange = (newIndex: { startIndex?: number; endIndex?: number }) => {
@@ -115,44 +97,132 @@ endIndex: newIndex.endIndex ?? 20, // Use fallback if undefined
 };
 
 useEffect(() => {
-const socket = new WebSocket("ws://localhost:8080"); // Change to your WebSocket server
+  const socket = new WebSocket("ws://localhost:8080"); // Change to your WebSocket server
+  
+  socket.onopen = () => {
+  console.log("Connected to WebSocket");
+  };
+  
+  socket.onmessage = (event) => {
+  try {
+    console.log("Event data",event?.data)
+      const data = JSON.parse(event?.data);
+      if (data && 
+          data.DEVICE_ID && 
+          data.LATITUDE!=="0"&&
+          data.LONGITUDE!=="0" &&
+          !isNaN(parseFloat(data.ENGINE_RPM)) &&
+          !isNaN(parseFloat(data.FUEL_LEVEL)) &&
+          !isNaN(parseFloat(data.SPEED))) {
+        
+        setData((prevData) => {
+          const updatedData = [
+            ...prevData,
+            {
+              TIME: new Date().toLocaleTimeString(),
+              name: new Date().toLocaleTimeString(),
+              DEVICE_ID: data.DEVICE_ID,
+              FUEL_LEVEL: parseFloat(data.FUEL_LEVEL),
+              SPEED: parseFloat(data.SPEED),
+              ENGINE_RPM: parseFloat(data.ENGINE_RPM),
+            },
+          ];
+          setLat(parseFloat(data.LATITUDE))
+          setLong(parseFloat(data.LONGITUDE))
+          setSpeed(parseFloat(data.SPEED))
+          return updatedData;
+        });
+      }
+  console.log(data);
+  
+  if (data.LATITUDE && data.LONGITUDE && data.LATITUDE!=="0" && data.LONGITUDE!=="0") {
+  console.log("New Position:", data.LATITUDE, data.LONGITUDE);
+  
+  setDisPositions((prevPositions) => {
+      if (prevPositions.length > 0) {
+        const lastPos = prevPositions[prevPositions.length - 1];
+        const distance = haversine(lastPos[0], lastPos[1], data.LATITUDE, data.LONGITUDE);
+        setTotalDistance((prevDistance) => prevDistance + distance);
+      }
+  
+      return [...prevPositions, [data.LATITUDE, data.LONGITUDE]]; // Add new position to the list
+    });
+  
+  // Append new position to the list without refreshing the map
+  setPositions((prevPositions) => [
+  ...prevPositions,
+  [parseFloat(data.LATITUDE), parseFloat(data.LONGITUDE)]
+  ]);
+  setCenter([data.LATITUDE, data.LATITUDE])
+  }
+  } catch (error) {
+  console.log("Error parsing WebSocket data:", error);
+  }
+  };
+  
+  socket.onerror = (error) => {
+  console.log("WebSocket error:", error);
+  };
+  
+  socket.onclose = () => {
+  console.log("WebSocket connection closed");
+  };
+  
+  return () => {
+  socket.close();
+  };
+  }, []);
 
-socket.onopen = () => {
-console.log("Connected to WebSocket");
-};
+  const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Radius of Earth in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);  // Convert degrees to radians
+    const dLon = (lon2 - lon1) * (Math.PI / 180);  // Convert degrees to radians
+  
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  
+    return R * c; // Returns distance in km
+  };
 
-socket.onmessage = (event) => {
-try {
-  console.log("Event data",event?.data)
-const data = JSON.parse(event?.data);
-console.log(data);
-if (data.LATITUDE && data.LONGITUDE) {
-console.log("New Position:", data.LATITUDE, data.LONGITUDE);
-
-// Append new position to the list without refreshing the map
-setPositions((prevPositions) => [
-...prevPositions,
-[parseFloat(data.LATITUDE), parseFloat(data.LONGITUDE)]
-]);
-setCenter([data.LATITUDE, data.LATITUDE])
+if (typeof window === 'undefined') {
+  return null;  // Prevent rendering on the server-side
 }
-} catch (error) {
-console.error("Error parsing WebSocket data:", error);
-}
-};
 
-socket.onerror = (error) => {
-console.error("WebSocket error:", error);
-};
+const fetchLocation = async () => {
+    console.log("hi",lat,long)
+    if (lat !== 0 && long !== 0) {
+      const location = await getLocationFromCoordinates(lat, long);
+      const locationArray = location.split(",");  
+      setLocation(locationArray);
+    }
+  };
 
-socket.onclose = () => {
-console.log("WebSocket connection closed");
-};
+  async function getLocationFromCoordinates(lat: number, lng: number): Promise<string> {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Error with the request ${response.statusText}`);
+      }
+      const data: { display_name: string } = await response.json();
+      return data?.display_name || "Location not found";
+    } catch (error) {
+      console.log(error);
+      return "Error fetching location";
+    }
+  }
 
-return () => {
-socket.close();
-};
-}, []);
+  useEffect(() => {
+    const intervalId = setInterval(fetchLocation, 10000);
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [lat, long]);
+
 if (typeof window === 'undefined') {
   return null;  // Prevent rendering on the server-side
 }
@@ -192,10 +262,10 @@ flexDirection: 'row',
 gap:"5px"
 }}>
 <img src={dis.src} alt="Image" style={{ height: "30px" }} />
-<p style={{ color: '#4186E5', fontSize: '22px' }}>24 KM</p>
+<p style={{ color: '#4186E5', fontSize: '22px' }}>{totalDistance.toFixed(2)}KMs</p>
 </div>
 </div>
-<p style={{fontSize: "11px", margin:"3px"}}>Today's total : 104 km</p>
+{/* <p style={{fontSize: "11px", margin:"3px"}}>Today's total : 104 km</p> */}
 </div>
 
 <div style={{
@@ -207,7 +277,7 @@ margin: '0 auto',
 flex: '1 1 calc(33% - 20px)',
 minWidth: '150px'
 }}>
-<p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Hours tested</p>
+<p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Current speed</p>
 <div style={{
 display: 'flex',
 flexDirection: 'row',
@@ -218,12 +288,12 @@ alignItems: 'center'
 <div style={{
 display: 'flex',
 flexDirection: 'row',
-gap: '10px'
+gap: '5px'
 }}>
-<p style={{ color: '#4186E5', fontSize: '22px' }}>06:31:54</p>
+<img src={speedImage.src} alt="Image" style={{ height: "27px", marginTop:"4px"}} />
+<p style={{ color: '#4186E5', fontSize: '22px' }}>{speed}</p>
 </div>
 </div>
-<p style={{fontSize: "11px", margin:"3px"}}>Today's total : 7Hrs</p>
 </div>
 
 <div style={{
@@ -249,14 +319,17 @@ flexDirection: 'row',
 gap: '5px'
 }}>
 <img src={loc.src} alt="Image" style={{ height: "27px", marginTop:"4px"}} />
-<p style={{ color: '#4186E5', fontSize: '22px' }}>Faridabad</p>
+<p style={{ color: '#4186E5', fontSize: '22px' }}>{location.slice(0,2).join(', ')}</p>
 </div>
 </div>
-<p style={{fontSize: "11px", margin:"3px"}}>28.4089° N, 77.3178° E</p>
+<p style={{fontSize: "11px", margin:"3px"}}>{`${lat}}° N, {${long}`}° E</p>
 </div>
 </div>
 <Map center={positions[0]} zoom={20} style={{ height: "500px", width: "100%", marginTop:"20px" }}>
-  <TileLayerComp url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+<TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    />
   <UpdateMapView position={latestPosition} />
 
   {/* Render all markers */}

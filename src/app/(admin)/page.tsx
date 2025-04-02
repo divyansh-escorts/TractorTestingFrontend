@@ -107,7 +107,7 @@ export default function Ecommerce() {
       
 
       <div className="col-span-12  mt-5">
-      {(date === today || !date) ? <LiveMap newData={newData} /> : <PathMap date={date} />}
+      {(date === today || !date) ? <LiveMap /> : <PathMap date={date} />}
         </div>
       {/* Demographics & Orders */}
       {/* <div className="col-span-12 xl:col-span-6">
