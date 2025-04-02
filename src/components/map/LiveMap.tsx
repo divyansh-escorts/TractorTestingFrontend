@@ -7,8 +7,7 @@ import tractorImg from "../tractorImg.svg"
 // Import Leaflet styles
 import dis from "../../../public/images/icons8-route-64.png"
 import loc from "../../../public/images/icons8-navigation-64.png"
-import speed from "../../../public/images/icons8-speed-24.png"
-import L from 'leaflet';
+import L, { LatLngExpression, LatLngTuple } from 'leaflet';
 import "leaflet/dist/leaflet.css";
 import {
 LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Brush, AreaChart, Area, ResponsiveContainer
@@ -41,7 +40,7 @@ ENGINE_RPM: string;
 }
 
 interface GraphDataProps {
-newData: _Data ; // Assuming it expects a `data` prop
+newData: _Data | null; // Assuming it expects a `data` prop
 }
 
 const customIcon = L.icon({
@@ -59,145 +58,53 @@ const MarkerComp = dynamic(() => import("react-leaflet").then((mod) => mod.Marke
 const PopupComp = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false });
 const PolylineComp = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false });
 
+interface UpdateMapViewProps {
+  position: LatLngExpression | undefined;
+}
 // Custom component to move the map when new data arrives
-const UpdateMapView = ({ position}) => {
+const UpdateMapView = ({position}:UpdateMapViewProps) => {
+  if (typeof window !== 'undefined' && position) {
 const map = useMap();
 useEffect(() => {
 if (position) {
-map.setView(position, 15);
+map?.setView(position, 15);
 }
 }, [position, map]);
 return null;
+  }
 };
 
 const LiveMap: React.FC<GraphDataProps> = ({ newData }) => {
-const [positions, setPositions] = useState<number[][]>([]); // Default: Nashik
-const [disPositions, setDisPositions] = useState<number[][]>([]);
+const [positions, setPositions] = useState<LatLngTuple[]>([]); // Default: Nashik
+const [center, setCenter] = useState<LatLngExpression>(); 
 const [data, setData] = useState<ChartData[]>([]);
 const [brushIndices, setBrushIndices] = useState<{ startIndex: number, endIndex: number }>({ startIndex: 0, endIndex: 20 });
-const [totalDistance, setTotalDistance] = useState<number>(0); 
-const [location, setLocation] = useState<string[]>([]); 
-
-
 
 useEffect(() => {
-    try {
-      // Check if newData is present and contains valid values
-      if (newData && 
-          newData.DEVICE_ID && 
-          !isNaN(parseFloat(newData.ENGINE_RPM)) &&
-          !isNaN(parseFloat(newData.FUEL_LEVEL)) &&
-          !isNaN(parseFloat(newData.SPEED))) {
-        
-        setData((prevData) => {
-          const updatedData = [
-            ...prevData,
-            {
-              TIME: new Date().toLocaleTimeString(),
-              name: new Date().toLocaleTimeString(),
-              DEVICE_ID: newData.DEVICE_ID,
-              FUEL_LEVEL: parseFloat(newData.FUEL_LEVEL),
-              SPEED: parseFloat(newData.SPEED),
-              ENGINE_RPM: parseFloat(newData.ENGINE_RPM),
-            },
-          ];
-          console.log(updatedData);  // You can check if data is updated correctly
-          return updatedData;
-        });
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  }, [newData]);  // Only runs when newData changes
-
-  useEffect(() => {
-    if (newData && newData.LATITUDE && newData.LONGITUDE) {
-      const lat = parseFloat(newData.LATITUDE);
-      const lon = parseFloat(newData.LONGITUDE);
-
-      setDisPositions((prevPositions) => {
-        if (prevPositions.length > 0) {
-          const lastPos = prevPositions[prevPositions.length - 1];
-          const distance = haversine(lastPos[0], lastPos[1], lat, lon);
-          setTotalDistance((prevDistance) => prevDistance + distance);
-        }
-
-        return [...prevPositions, [lat, lon]]; // Add new position to the list
-      });
-    }
-  }, [newData]); // Runs when newData changes
-
-  const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Radius of Earth in km
-    const dLat = (lat2 - lat1) * (Math.PI / 180);  // Convert degrees to radians
-    const dLon = (lon2 - lon1) * (Math.PI / 180);  // Convert degrees to radians
-  
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  
-    return R * c; // Returns distance in km
-  };
-
-
-  let currentLatitude = parseFloat(newData?.LATITUDE);
-  let currentLongitude = parseFloat(newData?.LONGITUDE);
-  
-  async function getLocationFromCoordinates(lat: number, lng: number): Promise<string> {
-      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
-      try {
-          const response = await fetch(url);
-          if (!response.ok) {
-              throw new Error(`Error with the request: ${response.statusText}`);
-          }
-          const data: { display_name: string } = await response.json();
-  
-          if (data && data.display_name) {
-              return data.display_name;
-          } else {
-              return 'Location not found';
-          }
-      } catch (error) {
-          console.log(error);
-          return 'Error fetching location';
-      }
-  }
-
-  function continuousAutoRunLocation() {
-    
-
-      // Check if the coordinates are valid
-      if (isNaN(currentLatitude) || isNaN(currentLongitude)) {
-          console.log("Invalid latitude or longitude values.");
-          return;
-      }
-  
-      setInterval(async () => {
-
-          // Fetch location using current coordinates
-          const location = await getLocationFromCoordinates(currentLatitude, currentLongitude);
-          console.log('Location:', location);
-          const locationArray = location.split(",");
-          setLocation(locationArray);
-          
-          // Simulate getting new coordinates, replace with actual method to update lat/lon
-          currentLatitude = parseFloat(newData?.LATITUDE);
-          currentLongitude = parseFloat(newData?.LONGITUDE);
-  
-          // Optional: Add logic here to ensure you always have updated coordinates
-          if (isNaN(currentLatitude) || isNaN(currentLongitude)) {
-              console.log("Received invalid coordinates.");
-              return;
-          }
-      }, 30000);
-  }
-  
-  // Trigger the function to start
-  continuousAutoRunLocation();
-  
+try{
+console.log(newData)
+if(newData){
+setData((prevData) => {
+const updatedData = [
+...prevData,
+{
+TIME: new Date().toLocaleTimeString(),
+name: new Date().toLocaleTimeString(),
+DEVICE_ID: newData.DEVICE_ID,
+FUEL_LEVEL: parseFloat(newData.FUEL_LEVEL),
+SPEED: parseFloat(newData.SPEED),
+ENGINE_RPM: parseFloat(newData.ENGINE_RPM),
+},
+];
+console.log(updatedData)
+return updatedData;
+});
+}
+}
+catch(err){
+console.log(err)
+}
+},[newData])
 
 // Handle Brush changes with optional startIndex and endIndex
 const handleBrushChange = (newIndex: { startIndex?: number; endIndex?: number }) => {
@@ -207,9 +114,50 @@ endIndex: newIndex.endIndex ?? 20, // Use fallback if undefined
 });
 };
 
+useEffect(() => {
+const socket = new WebSocket("ws://localhost:8080"); // Change to your WebSocket server
 
+socket.onopen = () => {
+console.log("Connected to WebSocket");
+};
+
+socket.onmessage = (event) => {
+try {
+  console.log("Event data",event?.data)
+const data = JSON.parse(event?.data);
+console.log(data);
+if (data.LATITUDE && data.LONGITUDE) {
+console.log("New Position:", data.LATITUDE, data.LONGITUDE);
+
+// Append new position to the list without refreshing the map
+setPositions((prevPositions) => [
+...prevPositions,
+[parseFloat(data.LATITUDE), parseFloat(data.LONGITUDE)]
+]);
+setCenter([data.LATITUDE, data.LATITUDE])
+}
+} catch (error) {
+console.error("Error parsing WebSocket data:", error);
+}
+};
+
+socket.onerror = (error) => {
+console.error("WebSocket error:", error);
+};
+
+socket.onclose = () => {
+console.log("WebSocket connection closed");
+};
+
+return () => {
+socket.close();
+};
+}, []);
+if (typeof window === 'undefined') {
+  return null;  // Prevent rendering on the server-side
+}
 // Get the latest position for centering the map
-const latestPosition = positions.length > 0 ? positions[0] : [19.9975, 73.7898];
+const latestPosition:LatLngTuple = positions.length > 0 ? positions[0] : [19.9975, 73.7898];
 
 return (
 <div style={{ display: 'flex', width: '100%' }}>
@@ -244,11 +192,11 @@ flexDirection: 'row',
 gap:"5px"
 }}>
 <img src={dis.src} alt="Image" style={{ height: "30px" }} />
-<p style={{ color: '#4186E5', fontSize: '22px' }}>{totalDistance.toFixed(2)} KM</p>
+<p style={{ color: '#4186E5', fontSize: '22px' }}>24 KM</p>
 </div>
 </div>
+<p style={{fontSize: "11px", margin:"3px"}}>Today's total : 104 km</p>
 </div>
-
 
 <div style={{
 backgroundColor: '#E3F5FF',
@@ -259,7 +207,7 @@ margin: '0 auto',
 flex: '1 1 calc(33% - 20px)',
 minWidth: '150px'
 }}>
-<p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Current speed</p>
+<p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Hours tested</p>
 <div style={{
 display: 'flex',
 flexDirection: 'row',
@@ -270,12 +218,12 @@ alignItems: 'center'
 <div style={{
 display: 'flex',
 flexDirection: 'row',
-gap: '5px'
+gap: '10px'
 }}>
-<img src={speed.src} alt="Image" style={{ height: "27px", marginTop:"4px"}} />
-<p style={{ color: '#4186E5', fontSize: '22px' }}>{newData.SPEED}</p>
+<p style={{ color: '#4186E5', fontSize: '22px' }}>06:31:54</p>
 </div>
 </div>
+<p style={{fontSize: "11px", margin:"3px"}}>Today's total : 7Hrs</p>
 </div>
 
 <div style={{
@@ -301,28 +249,26 @@ flexDirection: 'row',
 gap: '5px'
 }}>
 <img src={loc.src} alt="Image" style={{ height: "27px", marginTop:"4px"}} />
-<p style={{ color: '#4186E5', fontSize: '22px' }}>{location.slice(0, 2).join(', ')}</p>
+<p style={{ color: '#4186E5', fontSize: '22px' }}>Faridabad</p>
 </div>
 </div>
-<p style={{ fontSize: "11px", margin: "3px" }}>
-     {`${newData?.LATITUDE}`}° N, {`${newData?.LONGITUDE}`}° E
- </p>
+<p style={{fontSize: "11px", margin:"3px"}}>28.4089° N, 77.3178° E</p>
 </div>
 </div>
-<Map center={latestPosition} zoom={20} style={{ height: "500px", width: "100%", marginTop:"20px" }}>
-<TileLayerComp url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-<UpdateMapView position={latestPosition} />
+<Map center={positions[0]} zoom={20} style={{ height: "500px", width: "100%", marginTop:"20px" }}>
+  <TileLayerComp url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+  <UpdateMapView position={latestPosition} />
 
-{/* Render all markers */}
-{positions.map((pos, index) => (
-<MarkerComp key={index} position={pos} icon={customIcon} >
-<PopupComp>Point {index + 1}: {pos[0]}, {pos[1]}</PopupComp>
-</MarkerComp>
-))}
-{/* Draw a polyline connecting the points */}
-{positions.length > 1 && (
-<PolylineComp positions={positions} color="blue" weight={3} />
-)}
+  {/* Render all markers */}
+    {positions.map((pos, index) => (
+    <MarkerComp key={index} position={pos} icon={customIcon} >
+    <PopupComp>Point {index + 1}: {pos[0]}, {pos[1]}</PopupComp>
+    </MarkerComp>
+  ))}
+    {/* Draw a polyline connecting the points */}
+    {positions.length > 1 && (
+    <PolylineComp positions={positions} color="blue" weight={3} />
+    )}
 </Map>
 </div>
 
@@ -342,7 +288,6 @@ flexDirection: 'column'
 <YAxis label={{ value: 'Fuel (%)', angle: -90, position: 'insideLeft' }} domain={[0, 100]} tickCount={6} />
 <Tooltip />
 <Line type="monotone" dataKey="FUEL_LEVEL" stroke="#8884d8" fill="#8884d8" isAnimationActive={false} animationDuration={0} />
-<Brush height={20} startIndex={brushIndices.startIndex} onChange={handleBrushChange} />
 </LineChart>
 </ResponsiveContainer>
 
@@ -354,7 +299,6 @@ flexDirection: 'column'
 <YAxis label={{ value: 'Speed km/h', angle: -90, position: 'insideLeft' }} domain={[0, 60]} tickCount={6} />
 <Tooltip />
 <Line type="monotone" dataKey="SPEED" stroke="#82ca9d" fill="#82ca9d" isAnimationActive={false} animationDuration={0} />
-<Brush height={20} startIndex={brushIndices.startIndex} onChange={handleBrushChange} />
 </LineChart>
 </ResponsiveContainer>
 
@@ -363,7 +307,7 @@ flexDirection: 'column'
 <AreaChart data={data} syncId="rpmChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
 <CartesianGrid strokeDasharray="3 3" />
 <XAxis dataKey="TIME" />
-<YAxis label={{ value: 'RPM', angle: -90, position: 'insideLeft' }} domain={[0, 3500]} tickCount={6} />
+<YAxis label={{ value: 'RPM', angle: -90, position: 'insideLeft' }} domain={[0, 3000]} tickCount={6} />
 <Tooltip />
 <Area type="monotone" dataKey="ENGINE_RPM" stroke="#82ca9d" fill="#82ca9d" isAnimationActive={false} animationDuration={0} />
 <Brush height={20} startIndex={brushIndices.startIndex} onChange={handleBrushChange} />

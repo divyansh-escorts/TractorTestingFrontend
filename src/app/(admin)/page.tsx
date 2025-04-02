@@ -1,4 +1,4 @@
-'use client'
+"use client"
 import type { Metadata } from "next";
 import { TractorDetails } from "@/components/ecommerce/TractorDetails";
 import React, { useEffect, useState } from "react";
@@ -77,6 +77,9 @@ export default function Ecommerce() {
       socket.close();
     };
   }, []);
+  if (typeof window === 'undefined') {
+    return null;  // Prevent rendering on the server-side
+  }
 
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
