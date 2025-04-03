@@ -196,7 +196,7 @@ useEffect(() => {
 
 
 useEffect(() => {
-const socket = new WebSocket("ws://35.85.216.76:8080"); // Change to your WebSocket server
+const socket = new WebSocket("wss://fdcserver.escortskubota.com/ws/"); // Change to your WebSocket server
 
 socket.onopen = () => {
 console.log("Connected to WebSocket");
