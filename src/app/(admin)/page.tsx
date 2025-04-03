@@ -45,7 +45,7 @@ export default function Ecommerce() {
 
   useEffect(() => {
     if(typeof window!=='undefined'){
-    const socket = new WebSocket("ws://localhost:8080"); // Change to your WebSocket server
+    const socket = new WebSocket("ws://localhost:3307"); // Change to your WebSocket server
 
     socket.onopen = () => {
       console.log("Connected to WebSocket");
