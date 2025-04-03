@@ -130,69 +130,87 @@ endIndex: newIndex.endIndex ?? 20, // Use fallback if undefined
 };
 
 useEffect(() => {
- setData([])
- const fetchDetails = async () => {
- try {
+  setData([])
+  const fetchDetails = async () => {
+  try {
+  
+  const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/live`);
+  console.log(res?.data)
+  function addTimeToCurrentTime(currentTime:string) {
+  const additionalTime = "5:30"
+  const time = currentTime.match(/(\d{2}:\d{2}:\d{2})/)?.[0];
+  if (!time) {
+  return "Error: Invalid time format";
+  }
+  const [hours, minutes, seconds] = time.split(":").map(Number);
+  const [addHours, addMinutes] = additionalTime.split(":").map(Number);
+  let newMinutes = minutes + addMinutes;
+  let newHours = hours + addHours + Math.floor(newMinutes / 60); 
+  newMinutes = newMinutes % 60; 
+  newHours = newHours % 24;
+  let newSeconds = seconds;
+  const formattedTime = `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}:${String(newSeconds).padStart(2, '0')}`;
+  
+  return formattedTime;
+  } 
  
- const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/live`);
- console.log(res?.data)
- if(res.status==200){
- const newData = res.data.map((item:any) => ({
- "TIME": item.message.TIME,
- "DEVICE_ID": item.message.DEVICE_ID,
- "LATITUDE": item.message.LATITUDE,
- "LONGITUDE": item.message.LONGITUDE,
- "ALTITUDE": item.message.ALTITUDE,
- "SPEED": item.message.SPEED,
- "FUEL_LEVEL": item.message.FUEL_LEVEL,
- "ENGINE_RPM": item.message.ENGINE_RPM
- }));
- console.log(newData)
- setData(newData)
- let totalDistance = 0
- let allDataLenght = newData.length
- // console.log(allDataLenght)
- let lastPostion = newData[allDataLenght-1]
- console.log(lastPostion)
- const latitude = parseFloat(lastPostion?.LATITUDE); 
- const longitude = parseFloat(lastPostion?.LONGITUDE);
- setLat(latitude)
- setLong(longitude)
- const location = await getLocationFromCoordinates(latitude, longitude);
- const locationArray = location.split(", ")
- setLocation(locationArray)
- // Loop through the coordinates and calculate distance between consecutive points
- for (let i = 0; i < newData.length - 1; i++) {
- const current = newData[i];
- const next = newData[i + 1];
+  if(res.status==200){
+  const newData = res.data.map((item:any) => ({
+  "TIME": addTimeToCurrentTime(item.message.TIME),
+  "DEVICE_ID": item.message.DEVICE_ID,
+  "LATITUDE": item.message.LATITUDE,
+  "LONGITUDE": item.message.LONGITUDE,
+  "ALTITUDE": item.message.ALTITUDE,
+  "SPEED": item.message.SPEED,
+  "FUEL_LEVEL": item.message.FUEL_LEVEL,
+  "ENGINE_RPM": item.message.ENGINE_RPM
+  }));
+  console.log(newData)
+  setData(newData)
+  let totalDistance = 0
+  let allDataLenght = newData.length
+  // console.log(allDataLenght)
+  let lastPostion = newData[allDataLenght-1]
+  console.log(lastPostion)
+  const latitude = parseFloat(lastPostion?.LATITUDE); 
+  const longitude = parseFloat(lastPostion?.LONGITUDE);
+  setLat(latitude)
+  setLong(longitude)
+  const location = await getLocationFromCoordinates(latitude, longitude);
+  const locationArray = location.split(", ")
+  setLocation(locationArray)
+  // Loop through the coordinates and calculate distance between consecutive points
+  for (let i = 0; i < newData.length - 1; i++) {
+  const current = newData[i];
+  const next = newData[i + 1];
+  
+  const lat1 = parseFloat(current.LATITUDE);
+  const lon1 = parseFloat(current.LONGITUDE);
+  const lat2 = parseFloat(next.LATITUDE);
+  const lon2 = parseFloat(next.LONGITUDE);
+  
+  totalDistance += haversine(lat1, lon1, lat2, lon2);
+  }
+  setTotalDistance(totalDistance)
  
- const lat1 = parseFloat(current.LATITUDE);
- const lon1 = parseFloat(current.LONGITUDE);
- const lat2 = parseFloat(next.LATITUDE);
- const lon2 = parseFloat(next.LONGITUDE);
+  if (newData?.length > 0) {
+  console.log(newData)
+  const positions:LatLngTuple[] = newData.map((point:any) => [parseFloat(point.LATITUDE), parseFloat(point.LONGITUDE)]);
+  console.log(positions)
+  setPositions(positions)
+  }
+  }
+  else{
+  console.log("failed to load data")
+  }
  
- totalDistance += haversine(lat1, lon1, lat2, lon2);
- }
- setTotalDistance(totalDistance)
-
- if (newData?.length > 0) {
- console.log(newData)
- const positions:LatLngTuple[] = newData.map((point:any) => [parseFloat(point.LATITUDE), parseFloat(point.LONGITUDE)]);
- console.log(positions)
- setPositions(positions)
- }
- }
- else{
- console.log("failed to load data")
- }
-
- } catch (err) {
- console.log(err)
- } 
- };
-
- fetchDetails(); 
- }, []);
+  } catch (err) {
+  console.log(err)
+  } 
+  };
+ 
+  fetchDetails(); 
+  }, []);
 
 
 useEffect(() => {
