@@ -71,6 +71,7 @@ const PathMap: React.FC<dateProps> = ({ date }) => {
  const [position, setPosition] = useState<LatLngTuple[]>([]);
  const [distance, setDistance] = useState<number>();
  const [location, setLocation] = useState<string[]>([]); 
+ const [HMR, setHMR] = useState<string>(); 
 
  // Convert degrees to radians
 const toRadians = (degree: number) => {
@@ -89,6 +90,31 @@ const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
  return R * c; // Distance in km
 };
+
+const timeToSeconds = (time: string): number => {
+ const [hours, minutes, seconds] = time.split(':').map(Number);
+ return hours * 3600 + minutes * 60 + seconds;
+};
+
+const secondsToTime = (seconds: number): string => {
+ const hours = Math.floor(seconds / 3600);
+ const minutes = Math.floor((seconds % 3600) / 60);
+ const secs = seconds % 60;
+
+ return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};
+
+function calculateDecimal(number: number): string {
+ const [integerPart, decimalPart] = number.toString().split(".")
+ // console.log(decimalPart)
+ const result = (parseInt(decimalPart) / 60); 
+ const res = result.toString().replace('.', '');
+ const firstFourDigits = res.slice(0, 4);
+ const afterDecimal = parseInt(firstFourDigits)
+ const data = `${Math.floor(number)}.${afterDecimal}`
+ // console.log(`${Math.floor(number)}.${afterDecimal}`)
+ return `${Math.floor(number)}.${afterDecimal}`;
+}
 
 
 async function getLocationFromCoordinates(
@@ -117,80 +143,95 @@ async function getLocationFromCoordinates(
 }
 
 
-useEffect(() => {
-  setData([])
-  const fetchDetails = async () => {
-  try {
-  
-  const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/historic?date=${date}`);
-  console.log(res)
-  if(res.status==200){
-  function addTimeToCurrentTime(currentTime:string) {
-  const additionalTime = "5:30"
-  const time = currentTime.match(/(\d{2}:\d{2}:\d{2})/)?.[0];
-  if (!time) {
-  return "Error: Invalid time format";
-  }
-  const [hours, minutes, seconds] = time.split(":").map(Number);
-  const [addHours, addMinutes] = additionalTime.split(":").map(Number);
-  let newMinutes = minutes + addMinutes;
-  let newHours = hours + addHours + Math.floor(newMinutes / 60); 
-  newMinutes = newMinutes % 60; 
-  newHours = newHours % 24;
-  let newSeconds = seconds;
-  const formattedTime = `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}:${String(newSeconds).padStart(2, '0')}`;
-  
-  return formattedTime;
-  } 
-  const newData = res.data.result[0]?.data.map((item:any) => ({
-  "TIME": addTimeToCurrentTime(item.TIME),
-  "DEVICE_ID": item.DEVICE_ID,
-  "LATITUDE": item.LATITUDE,
-  "LONGITUDE": item.LONGITUDE,
-  "ALTITUDE": item.LALTITUDE,
-  "SPEED": item.SPEED,
-  "FUEL_LEVEL": item.FUEL_LEVEL,
-  "ENGINE_RPM": item.ENGINE_RPM
-  }));
+ useEffect(() => {
+ setData([])
+ let HMR = 0
+ const fetchDetails = async () => {
+ try {
  
-  setData(newData)
-  const allData = res?.data?.result[0]?.data
-  let totalDistance = 0
-  let allDataLenght = allData.lenght
-  let lastPostion = allData[99]
-  console.log(lastPostion)
-  const latitude = parseFloat(lastPostion?.LATITUDE); 
-  const longitude = parseFloat(lastPostion?.LONGITUDE);
-  const location = await getLocationFromCoordinates(latitude, longitude);
-  const locationArray = location.split(",")
-  setLocation(locationArray)
-  // Loop through the coordinates and calculate distance between consecutive points
-  for (let i = 0; i < allData.length - 1; i++) {
-  const current = allData[i];
-  const next = allData[i + 1];
-  
-  const lat1 = parseFloat(current.LATITUDE);
-  const lon1 = parseFloat(current.LONGITUDE);
-  const lat2 = parseFloat(next.LATITUDE);
-  const lon2 = parseFloat(next.LONGITUDE);
-  
-  totalDistance += haversineDistance(lat1, lon1, lat2, lon2);
-  }
-  setDistance(totalDistance)
-  }
-  else{
-  console.log("failed to load data")
-  }
+ const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/historic?date=${date}`);
+ console.log(res)
+ if(res.status==200){
+ function addTimeToCurrentTime(currentTime:string) {
+ const additionalTime = "5:30"
+ const time = currentTime.match(/(\d{2}:\d{2}:\d{2})/)?.[0];
+ if (!time) {
+ return "Error: Invalid time format";
+ }
+ const [hours, minutes, seconds] = time.split(":").map(Number);
+ const [addHours, addMinutes] = additionalTime.split(":").map(Number);
+ let newMinutes = minutes + addMinutes;
+ let newHours = hours + addHours + Math.floor(newMinutes / 60); 
+ newMinutes = newMinutes % 60; 
+ newHours = newHours % 24;
+ let newSeconds = seconds;
+ const formattedTime = `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}:${String(newSeconds).padStart(2, '0')}`;
  
-  } catch (err) {
-  console.log(err)
-  } 
-  };
- 
-  fetchDetails(); 
-  }, [date]);
+ return formattedTime;
+ } 
+ const newData = res.data.result[0]?.data
+ .filter((item: any) => item.LATITUDE !== '0.0000' && item.LONGITUDE !== '0.0000') 
+ .map((item: any) => ({
+ "TIME": addTimeToCurrentTime(item.TIME),
+ "DEVICE_ID": item.DEVICE_ID,
+ "LATITUDE": calculateDecimal(item.LATITUDE),
+ "LONGITUDE": calculateDecimal(item.LONGITUDE),
+ "ALTITUDE": item.ALTITUDE,
+ "SPEED": item.SPEED,
+ "FUEL_LEVEL": item.FUEL_LEVEL,
+ "ENGINE_RPM": item.ENGINE_RPM
+ }))
+ .filter((value:any, index:any, self:any) => {
+ return index === self.findIndex((t:any) => (
+ t.TIME === value.TIME
+ ));
+ });
 
-  
+ setData(newData)
+ const allData = newData
+ console.log(allData)
+ let totalDistance = 0
+ let allDataLength = allData.length
+ let lastPostion = allData[allDataLength-1]
+ console.log(lastPostion)
+ const latitude = parseFloat(lastPostion?.LATITUDE); 
+ const longitude = parseFloat(lastPostion?.LONGITUDE);
+ console.log(latitude,longitude)
+ const location = await getLocationFromCoordinates(latitude, longitude);
+ const locationArray = location.split(",")
+ setLocation(locationArray)
+ // Loop through the coordinates and calculate distance between consecutive points
+ for (let i = 0; i < allData.length - 1; i++) {
+ const current = allData[i];
+ const next = allData[i + 1];
+ 
+ const lat1 = parseFloat(current.LATITUDE);
+ const lon1 = parseFloat(current.LONGITUDE);
+ const lat2 = parseFloat(next.LATITUDE);
+ const lon2 = parseFloat(next.LONGITUDE);
+ if(lat1 != lat2 || lon1 != lon2){
+ const dif = timeToSeconds(next.TIME) - timeToSeconds(current.TIME)
+ HMR += dif
+ }
+ 
+ totalDistance += haversineDistance(lat1, lon1, lat2, lon2);
+ }
+ console.log(secondsToTime(HMR))
+ setHMR(secondsToTime(HMR))
+ setDistance(totalDistance)
+ }
+ else{
+ console.log("failed to load data")
+ }
+
+ } catch (err) {
+ console.log(err)
+ } 
+ };
+
+ fetchDetails(); 
+ }, [date]);
+
  useEffect(() => {
  // Only set center position when positions array is updated
  if (data?.length > 0) {
@@ -256,7 +297,7 @@ useEffect(() => {
 
  </div>
 
- {/* <div style={{
+ <div style={{
  backgroundColor: '#E3F5FF',
  borderRadius: '8px', 
  boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', 
@@ -278,11 +319,10 @@ useEffect(() => {
  flexDirection: 'row', 
  gap: '10px'
  }}>
- <p style={{ color: '#4186E5', fontSize: '22px' }}>06:31:54</p>
+ <p style={{ color: '#4186E5', fontSize: '22px' }}>{HMR}</p>
  </div>
  </div>
- <p style={{fontSize: "11px", margin:"3px"}}>Today's total : 7Hrs</p>
- </div> */}
+ </div>
 
  <div style={{
  backgroundColor: '#E3F5FF',

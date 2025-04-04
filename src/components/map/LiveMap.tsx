@@ -108,6 +108,7 @@ const [brushIndices, setBrushIndices] = useState<{ startIndex: number, endIndex:
 const [disPositions, setDisPositions] = useState<number[][]>([]);
 const [totalDistance, setTotalDistance] = useState<number>(0);
 const [location, setLocation] = useState<string[]>([]); 
+const [time, setTime] = useState<string>(); 
 const [speed, setSpeed] = useState<number>(0); 
 const [lat, setLat] = useState<number>(0);
 const [long, setLong] = useState<number>(0);
@@ -129,93 +130,121 @@ endIndex: newIndex.endIndex ?? 20, // Use fallback if undefined
 });
 };
 
+
+function addTimeToCurrentTime(currentTime:string) {
+ const additionalTime = "5:30"
+ const time = currentTime.match(/(\d{2}:\d{2}:\d{2})/)?.[0];
+ if (!time) {
+ return "Error: Invalid time format";
+ }
+ const [hours, minutes, seconds] = time.split(":").map(Number);
+ const [addHours, addMinutes] = additionalTime.split(":").map(Number);
+ let newMinutes = minutes + addMinutes;
+ let newHours = hours + addHours + Math.floor(newMinutes / 60); 
+ newMinutes = newMinutes % 60; 
+ newHours = newHours % 24;
+ let newSeconds = seconds;
+ const formattedTime = `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}:${String(newSeconds).padStart(2, '0')}`;
+
+ return formattedTime;
+} 
+
+function calculateDecimal(number: number): string {
+ const [integerPart, decimalPart] = number.toString().split(".")
+ const result = (parseInt(decimalPart) / 60); 
+ const res = result.toString().replace('.', '');
+ const firstFourDigits = res.slice(0, 4);
+ const afterDecimal = parseInt(firstFourDigits)
+ const data = `${Math.floor(number)}.${afterDecimal}`
+ return `${Math.floor(number)}.${afterDecimal}`;
+}
+
+
 useEffect(() => {
-  setData([])
-  const fetchDetails = async () => {
-  try {
-  
-  const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/live`);
-  console.log(res?.data)
-  function addTimeToCurrentTime(currentTime:string) {
-  const additionalTime = "5:30"
-  const time = currentTime.match(/(\d{2}:\d{2}:\d{2})/)?.[0];
-  if (!time) {
-  return "Error: Invalid time format";
-  }
-  const [hours, minutes, seconds] = time.split(":").map(Number);
-  const [addHours, addMinutes] = additionalTime.split(":").map(Number);
-  let newMinutes = minutes + addMinutes;
-  let newHours = hours + addHours + Math.floor(newMinutes / 60); 
-  newMinutes = newMinutes % 60; 
-  newHours = newHours % 24;
-  let newSeconds = seconds;
-  const formattedTime = `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}:${String(newSeconds).padStart(2, '0')}`;
-  
-  return formattedTime;
-  } 
+ setData([])
+
+ const fetchDetails = async () => {
+ try {
  
-  if(res.status==200){
-  const newData = res.data.map((item:any) => ({
-  "TIME": addTimeToCurrentTime(item.message.TIME),
-  "DEVICE_ID": item.message.DEVICE_ID,
-  "LATITUDE": item.message.LATITUDE,
-  "LONGITUDE": item.message.LONGITUDE,
-  "ALTITUDE": item.message.ALTITUDE,
-  "SPEED": item.message.SPEED,
-  "FUEL_LEVEL": item.message.FUEL_LEVEL,
-  "ENGINE_RPM": item.message.ENGINE_RPM
-  }));
-  console.log(newData)
-  setData(newData)
-  let totalDistance = 0
-  let allDataLenght = newData.length
-  // console.log(allDataLenght)
-  let lastPostion = newData[allDataLenght-1]
-  console.log(lastPostion)
-  const latitude = parseFloat(lastPostion?.LATITUDE); 
-  const longitude = parseFloat(lastPostion?.LONGITUDE);
-  setLat(latitude)
-  setLong(longitude)
-  const location = await getLocationFromCoordinates(latitude, longitude);
-  const locationArray = location.split(", ")
-  setLocation(locationArray)
-  // Loop through the coordinates and calculate distance between consecutive points
-  for (let i = 0; i < newData.length - 1; i++) {
-  const current = newData[i];
-  const next = newData[i + 1];
-  
-  const lat1 = parseFloat(current.LATITUDE);
-  const lon1 = parseFloat(current.LONGITUDE);
-  const lat2 = parseFloat(next.LATITUDE);
-  const lon2 = parseFloat(next.LONGITUDE);
-  
-  totalDistance += haversine(lat1, lon1, lat2, lon2);
-  }
-  setTotalDistance(totalDistance)
+ const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/live`);
+ console.log(res?.data)
+
+ if(res.status==200){
+ let lastTimestamp: string | null = null; 
+ console.log(lastTimestamp)
+
+ const newData = res.data
+ .filter((item: any) => 
+ item.message.LATITUDE !== '0.0000' && 
+ item.message.LONGITUDE !== '0.0000') 
+ .map((item: any) => ({
+ "TIME": addTimeToCurrentTime(item.message.TIME),
+ "DEVICE_ID": item.message.DEVICE_ID,
+ "LATITUDE": calculateDecimal(item.message.LATITUDE),
+ "LONGITUDE": calculateDecimal(item.message.LONGITUDE),
+ "ALTITUDE": item.message.ALTITUDE,
+ "SPEED": item.message.SPEED,
+ "FUEL_LEVEL": item.message.FUEL_LEVEL,
+ "ENGINE_RPM": item.message.ENGINE_RPM
+ }))
+ .filter((value:any, index:any, self:any) => {
+ return index === self.findIndex((t:any) => (
+ t.TIME === value.TIME
+ ));
+ });
  
-  if (newData?.length > 0) {
-  console.log(newData)
-  const positions:LatLngTuple[] = newData.map((point:any) => [parseFloat(point.LATITUDE), parseFloat(point.LONGITUDE)]);
-  console.log(positions)
-  setPositions(positions)
-  }
-  }
-  else{
-  console.log("failed to load data")
-  }
+
+ console.log(newData)
+ setData(newData)
+ let totalDistance = 0
+ let allDataLenght = newData.length
+ // console.log(allDataLenght)
+ let lastPostion = newData[allDataLenght-1]
+ console.log(lastPostion)
+ setTime(lastPostion.TIME)
+ const latitude = parseFloat(lastPostion?.LATITUDE); 
+ const longitude = parseFloat(lastPostion?.LONGITUDE);
+ setLat(latitude)
+ setLong(longitude)
+ const location = await getLocationFromCoordinates(latitude, longitude);
+ const locationArray = location.split(", ")
+ setLocation(locationArray)
+ // Loop through the coordinates and calculate distance between consecutive points
+ for (let i = 0; i < newData.length - 1; i++) {
+ const current = newData[i];
+ const next = newData[i + 1];
  
-  } catch (err) {
-  console.log(err)
-  } 
-  };
+ const lat1 = parseFloat(current.LATITUDE);
+ const lon1 = parseFloat(current.LONGITUDE);
+ const lat2 = parseFloat(next.LATITUDE);
+ const lon2 = parseFloat(next.LONGITUDE);
  
-  fetchDetails(); 
-  }, []);
+ totalDistance += haversine(lat1, lon1, lat2, lon2);
+ }
+ setTotalDistance(totalDistance)
+
+ if (newData?.length > 0) {
+ console.log(newData)
+ const positions:LatLngTuple[] = newData.map((point:any) => [parseFloat(point.LATITUDE), parseFloat(point.LONGITUDE)]);
+ console.log(positions)
+ setPositions(positions)
+ }
+ }
+ else{
+ console.log("failed to load data")
+ }
+
+ } catch (err) {
+ console.log(err)
+ } 
+ };
+
+ fetchDetails(); 
+ }, []);
 
 
 useEffect(() => {
 const socket = new WebSocket("wss://fdcserver.escortskubota.com/ws/"); // Change to your WebSocket server
-
 socket.onopen = () => {
 console.log("Connected to WebSocket");
 };
@@ -226,8 +255,8 @@ try {
  const data = JSON.parse(event?.data);
  if (data && 
  data.DEVICE_ID && 
- data.LATITUDE!=="0"&&
- data.LONGITUDE!=="0" &&
+ data.LATITUDE!=="0.0000"&&
+ data.LONGITUDE!=="0.0000" &&
  !isNaN(parseFloat(data.ENGINE_RPM)) &&
  !isNaN(parseFloat(data.FUEL_LEVEL)) &&
  !isNaN(parseFloat(data.SPEED))) {
@@ -236,11 +265,11 @@ try {
  const updatedData = [
  ...prevData,
  {
- TIME: new Date().toLocaleTimeString(),
+ TIME: addTimeToCurrentTime(data.TIME),
  name: new Date().toLocaleTimeString(),
  DEVICE_ID: data.DEVICE_ID,
- LATITUDE: data.LATITUDE,
- LONGITUDE: data.LONGITUDE,
+ LATITUDE: calculateDecimal(data.LATITUDE),
+ LONGITUDE: calculateDecimal(data.LONGITUDE),
  ALTITUDE: data.ALTITUDE,
  FUEL_LEVEL: parseFloat(data.FUEL_LEVEL),
  SPEED: parseFloat(data.SPEED),
@@ -255,25 +284,25 @@ try {
  }
 console.log(data);
 
-if (data.LATITUDE && data.LONGITUDE && data.LATITUDE!=="0" && data.LONGITUDE!=="0") {
+if (data.LATITUDE && data.LONGITUDE && data.LATITUDE!=="0.0000" && data.LONGITUDE!=="0.0000") {
 console.log("New Position:", data.LATITUDE, data.LONGITUDE);
 
 setDisPositions((prevPositions) => {
  if (prevPositions.length > 0) {
  const lastPos = prevPositions[prevPositions.length - 1];
- const distance = haversine(lastPos[0], lastPos[1], data.LATITUDE, data.LONGITUDE);
+ const distance = haversine(lastPos[0], lastPos[1], parseInt(calculateDecimal(data.LATITUDE)), parseInt(calculateDecimal(data.LONGITUDE)));
  setTotalDistance((prevDistance) => prevDistance + distance);
  }
 
- return [...prevPositions, [data.LATITUDE, data.LONGITUDE]]; // Add new position to the list
+ return [...prevPositions, [parseInt(calculateDecimal(data.LATITUDE)), parseInt(calculateDecimal(data.LONGITUDE))]]; // Add new position to the list
  });
 
 // Append new position to the list without refreshing the map
 setPositions((prevPositions) => [
-...prevPositions,
-[parseFloat(data.LATITUDE), parseFloat(data.LONGITUDE)]
-]);
-setCenter([data.LATITUDE, data.LATITUDE])
+ ...prevPositions,
+ [parseFloat(calculateDecimal(data.LATITUDE)), parseFloat(calculateDecimal(data.LONGITUDE))]
+ ]);
+ setCenter([parseFloat(calculateDecimal(data.LATITUDE)), parseFloat(calculateDecimal(data.LONGITUDE))])
 }
 } catch (error) {
 console.log("Error parsing WebSocket data:", error);
@@ -406,7 +435,7 @@ flexDirection: 'row',
 gap: '5px'
 }}>
 <img src={speedImage.src} alt="Image" style={{ height: "27px", marginTop:"4px"}} />
-<p style={{ color: '#4186E5', fontSize: '22px' }}>{speed}</p>
+<p style={{ color: '#4186E5', fontSize: '22px' }}>{speed} kmph</p>
 </div>
 </div>
 </div>
@@ -475,6 +504,7 @@ flexDirection: 'column'
 <XAxis dataKey="TIME" />
 <YAxis label={{ value: 'Fuel (%)', angle: -90, position: 'insideLeft' }} domain={[0, 100]} tickCount={6} />
 <Tooltip />
+<Brush height={20} startIndex={brushIndices.startIndex} onChange={handleBrushChange} />
 <Line type="monotone" dataKey="FUEL_LEVEL" stroke="#8884d8" fill="#8884d8" isAnimationActive={false} animationDuration={0} />
 </LineChart>
 </ResponsiveContainer>
@@ -486,6 +516,7 @@ flexDirection: 'column'
 <XAxis dataKey="TIME" />
 <YAxis label={{ value: 'Speed km/h', angle: -90, position: 'insideLeft' }} domain={[0, 60]} tickCount={6} />
 <Tooltip />
+<Brush height={20} startIndex={brushIndices.startIndex} onChange={handleBrushChange} />
 <Line type="monotone" dataKey="SPEED" stroke="#82ca9d" fill="#82ca9d" isAnimationActive={false} animationDuration={0} />
 </LineChart>
 </ResponsiveContainer>
