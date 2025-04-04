@@ -19,20 +19,151 @@ function createData(
  tractor_number: string,
  distance: number,
  status: string,
+ view: string
 ) {
- return { id, tractor_name, tractor_number, distance, status };
+ return { id, tractor_name, tractor_number, distance, status , view};
 }
 
+interface ChartData {
+ name: string;
+ TIME: string;
+ LATITUDE:string;
+ LONGITUDE:string;
+ ALTITUDE: string;
+ DEVICE_ID: string;
+ FUEL_LEVEL: number;
+ SPEED: number;
+ ENGINE_RPM: number;
+ }
+
 // Sample data for the table
-const rows = [
- createData(1, '35 Champion', 'HR51 B 5643', 98, 'Running'),
- createData(2, 'Steeltrac 15', 'HR 51 A 0002', 103, 'Stopped'),
- createData(3, 'Euro 24G', 'HR 51 A 0003', 88, 'Stopped'),
- createData(4, '439 RDX', 'HR 51 A 0004', 72, 'Stopped'),
-];
 
 export default function Dashboard() {
  const router = useRouter();
+ const [Data, setData] = React.useState<ChartData[]>([]);
+ const [status, setStatus] = React.useState<string>("Stopped");
+ 
+ const rows = [
+ createData(1, '35 Champion', 'HR51 B 5643', 98, `${status}`,"yes"),
+ createData(2, 'Steeltrac 15', 'HR 51 A 0002', 103, 'Stopped','no'),
+ createData(3, 'Euro 24G', 'HR 51 A 0003', 88, 'Stopped','no'),
+ createData(4, '439 RDX', 'HR 51 A 0004', 72, 'Stopped','no'),
+ ];
+ function addTimeToCurrentTime(currentTime:string) {
+ const additionalTime = "5:30"
+ const time = currentTime.match(/(\d{2}:\d{2}:\d{2})/)?.[0];
+ if (!time) {
+ return "Error: Invalid time format";
+ }
+ const [hours, minutes, seconds] = time.split(":").map(Number);
+ const [addHours, addMinutes] = additionalTime.split(":").map(Number);
+ let newMinutes = minutes + addMinutes;
+ let newHours = hours + addHours + Math.floor(newMinutes / 60); 
+ newMinutes = newMinutes % 60; 
+ newHours = newHours % 24;
+ let newSeconds = seconds;
+ const formattedTime = `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}:${String(newSeconds).padStart(2, '0')}`;
+ 
+ return formattedTime;
+ } 
+
+ const timeToSeconds = (time: string): number => {
+ const [hours, minutes, seconds] = time?.split(':')?.map(Number);
+ return hours * 3600 + minutes * 60 + seconds;
+ };
+ 
+ let allData : ChartData[] = []
+
+ React.useEffect(() => {
+ const socket = new WebSocket("wss://fdcserver.escortskubota.com/ws/"); // Change to your WebSocket server
+ socket.onopen = () => {
+ console.log("Connected to WebSocket");
+ };
+ 
+ socket.onmessage = (event) => {
+ try {
+ console.log("Event data",event?.data)
+ const data = JSON.parse(event?.data);
+ if (data && 
+ data.DEVICE_ID && 
+ data.LATITUDE !== "0.000000" &&
+ data.LONGITUDE !== "0.000000" &&
+ !isNaN(parseFloat(data.ENGINE_RPM)) &&
+ !isNaN(parseFloat(data.FUEL_LEVEL)) &&
+ !isNaN(parseFloat(data.SPEED))) {
+ 
+ const commingData = 
+ {
+ TIME: addTimeToCurrentTime(data.TIME),
+ name: new Date().toLocaleTimeString(),
+ DEVICE_ID: data.DEVICE_ID,
+ LATITUDE: data.LATITUDE,
+ LONGITUDE: data.LONGITUDE,
+ ALTITUDE: data.ALTITUDE,
+ FUEL_LEVEL: parseFloat(data.FUEL_LEVEL),
+ SPEED: parseFloat(data.SPEED),
+ ENGINE_RPM: parseFloat(data.ENGINE_RPM),
+ }
+ ;
+ allData.push(commingData)
+
+ 
+ console.log(allData)
+ }
+ 
+
+ } catch (error) {
+ console.log("Error parsing WebSocket data:", error);
+ }
+ };
+ 
+ socket.onerror = (error) => {
+ console.log("WebSocket error:", error);
+ };
+ 
+ socket.onclose = () => {
+ console.log("WebSocket connection closed");
+ };
+ 
+ return () => {
+ socket.close();
+ };
+ }, []);
+
+
+ function checkStatus() {
+ console.log(allData.length)
+ if(allData.length>0){
+ let allDataLength = allData.length;
+ console.log(allDataLength)
+ let lastPos = allData[allDataLength-1];
+ let lastTime = timeToSeconds(lastPos?.TIME);
+ const currentDate = new Date();
+ const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
+ console.log(currentTime); 
+ if(currentTime-lastTime<=30){
+ setStatus("Running")
+ console.log("running")
+ }
+ else{
+ setStatus("Stopped")
+ console.log("stopped")
+ }
+ }
+ else{
+ setStatus("Stopped")
+ console.log("Stopped 1")
+ }
+ }
+
+ React.useEffect(() => {
+ console.log("i m in")
+ const intervalId = setInterval(checkStatus, 30000);
+ return () => {
+ clearInterval(intervalId);
+ };
+ }, []);
+
 
  const getStatusStyle = (status: string) => {
  switch (status) {
@@ -97,7 +228,7 @@ export default function Dashboard() {
  </Box>
  </TableCell>
  <TableCell align="right">
- {row.status==="Running"?<Button
+ {row.view==="yes"?<Button
  onClick={() => {
  router.push(`/`); 
  }}

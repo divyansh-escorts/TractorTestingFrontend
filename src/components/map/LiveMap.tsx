@@ -176,7 +176,9 @@ useEffect(() => {
  const newData = res.data
  .filter((item: any) => 
  item.message.LATITUDE !== '0.0000' && 
- item.message.LONGITUDE !== '0.0000') 
+ item.message.LONGITUDE !== '0.0000' && 
+ item.message.LATITUDE !== '0.000000' && 
+ item.message.LONGITUDE !== '0.000000') 
  .map((item: any) => ({
  "TIME": addTimeToCurrentTime(item.message.TIME),
  "DEVICE_ID": item.message.DEVICE_ID,
@@ -257,6 +259,8 @@ try {
  data.DEVICE_ID && 
  data.LATITUDE!=="0.0000"&&
  data.LONGITUDE!=="0.0000" &&
+ data.LATITUDE!=="0.000000"&&
+ data.LONGITUDE!=="0.000000" &&
  !isNaN(parseFloat(data.ENGINE_RPM)) &&
  !isNaN(parseFloat(data.FUEL_LEVEL)) &&
  !isNaN(parseFloat(data.SPEED))) {
@@ -284,7 +288,7 @@ try {
  }
 console.log(data);
 
-if (data.LATITUDE && data.LONGITUDE && data.LATITUDE!=="0.0000" && data.LONGITUDE!=="0.0000") {
+if (data.LATITUDE && data.LONGITUDE && data.LATITUDE!=="0.000000"&& data.LONGITUDE!=="0.000000" && data.LATITUDE!=="0.0000" && data.LONGITUDE!=="0.0000") {
 console.log("New Position:", data.LATITUDE, data.LONGITUDE);
 
 setDisPositions((prevPositions) => {

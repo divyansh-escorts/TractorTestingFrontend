@@ -170,7 +170,7 @@ async function getLocationFromCoordinates(
  return formattedTime;
  } 
  const newData = res.data.result[0]?.data
- .filter((item: any) => item.LATITUDE !== '0.0000' && item.LONGITUDE !== '0.0000') 
+ .filter((item: any) => item.LATITUDE !== '0.000000' && item.LONGITUDE !== '0.000000') 
  .map((item: any) => ({
  "TIME": addTimeToCurrentTime(item.TIME),
  "DEVICE_ID": item.DEVICE_ID,
