@@ -60,10 +60,10 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
       >
         <div>
           <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-            Divyansh Rastogi
+            Nitin Tijare
           </span>
           <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-            divyansh.rastogi@escortskubota.com
+            niteen.tijare@escortskubota.com
           </span>
         </div>
 

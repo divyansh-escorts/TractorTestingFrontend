@@ -148,17 +148,17 @@ export default function UserInfoCard() {
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
                     <Label>First Name</Label>
-                    <Input type="text" defaultValue="Divyansh" />
+                    <Input type="text" defaultValue="Niteen" />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Last Name</Label>
-                    <Input type="text" defaultValue="Rastogi" />
+                    <Input type="text" defaultValue="Tijare" />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Email Address</Label>
-                    <Input type="text" defaultValue="divyansh.rastogi@escortskubota.com" />
+                    <Input type="text" defaultValue="niteen.tijare@escortskubota.com" />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
