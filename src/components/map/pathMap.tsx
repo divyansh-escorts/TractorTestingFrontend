@@ -109,10 +109,8 @@ function calculateDecimal(number: number): string {
  // console.log(decimalPart)
  const result = (parseInt(decimalPart) / 60); 
  const res = result.toString().replace('.', '');
- const firstFourDigits = res.slice(0, 4);
- const afterDecimal = parseInt(firstFourDigits)
- const data = `${Math.floor(number)}.${afterDecimal}`
- // console.log(`${Math.floor(number)}.${afterDecimal}`)
+ const firstSixDigits = res.slice(0, 6);
+ const afterDecimal = parseInt(firstSixDigits)
  return `${Math.floor(number)}.${afterDecimal}`;
 }
 
@@ -170,7 +168,7 @@ async function getLocationFromCoordinates(
  return formattedTime;
  } 
  const newData = res.data.result[0]?.data
- .filter((item: any) => item.LATITUDE !== '0.000000' && item.LONGITUDE !== '0.000000') 
+ .filter((item: any) => item.LATITUDE !== '0.000000' && item.LONGITUDE !== '0.000000'&& item.LATITUDE !== '0.0000' && item.LONGITUDE !== '0.0000') 
  .map((item: any) => ({
  "TIME": addTimeToCurrentTime(item.TIME),
  "DEVICE_ID": item.DEVICE_ID,
@@ -200,6 +198,7 @@ async function getLocationFromCoordinates(
  const location = await getLocationFromCoordinates(latitude, longitude);
  const locationArray = location.split(",")
  setLocation(locationArray)
+ console.log(allData)
  // Loop through the coordinates and calculate distance between consecutive points
  for (let i = 0; i < allData.length - 1; i++) {
  const current = allData[i];
@@ -209,9 +208,13 @@ async function getLocationFromCoordinates(
  const lon1 = parseFloat(current.LONGITUDE);
  const lat2 = parseFloat(next.LATITUDE);
  const lon2 = parseFloat(next.LONGITUDE);
- if(lat1 != lat2 || lon1 != lon2){
+ if(next.TIME != "Error: Invalid time format" && current.TIME != "Error: Invalid time format"){
  const dif = timeToSeconds(next.TIME) - timeToSeconds(current.TIME)
+ if(lat1 != lat2 || lon1 != lon2){
+ if(dif<=1200){
  HMR += dif
+ }
+ }
  }
  
  totalDistance += haversineDistance(lat1, lon1, lat2, lon2);
@@ -265,33 +268,33 @@ async function getLocationFromCoordinates(
  flex: 1, // Make it take up 50% of the container
  display: 'flex', 
  flexDirection: 'column', 
- margin:'20px'
+ margin:'16.8px'
  }}>
  <div style={{display:'flex'}}>
  <div style={{
  backgroundColor: '#E3F5FF',
  borderRadius: '8px', 
  boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', 
- maxWidth: '190px', 
+ maxWidth: '160px', 
  margin: '0 auto',
- flex: '1 1 calc(33% - 20px)', // Adjust for 3 items in a row
+ flex: '1 1 calc(33% - 16.8px)', // Adjust for 3 items in a row
  minWidth: '150px'
  }}>
  <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Distance travelled</p>
  <div style={{
  display: 'flex', 
  flexDirection: 'row', 
- gap: '30px', 
+ gap: '25.2px', 
  justifyContent: 'center', 
  alignItems: 'center'
  }}>
  <div style={{ 
  display: 'flex', 
  flexDirection: 'row',
- gap:"5px"
+ gap:"4.2px"
  }}>
- <img src={dis.src} alt="Image" style={{ height: "30px" }} />
- <p style={{ color: '#4186E5', fontSize: '22px' }}>{distance?.toFixed(2)} KM</p>
+ <img src={dis.src} alt="Image" style={{ height: "25.2px" }} />
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{distance?.toFixed(2)} KM</p>
  </div>
  </div>
 
@@ -301,58 +304,58 @@ async function getLocationFromCoordinates(
  backgroundColor: '#E3F5FF',
  borderRadius: '8px', 
  boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', 
- maxWidth: '190px', 
+ maxWidth: '160px', 
  margin: '0 auto',
- flex: '1 1 calc(33% - 20px)',
+ flex: '1 1 calc(33% - 16.8px)', // Adjust for 3 items in a row
  minWidth: '150px'
  }}>
- <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Hours tested</p>
+ <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>HMR</p>
  <div style={{
- display: 'flex',
+ display: 'flex', 
  flexDirection: 'row', 
- gap: '30px', 
- justifyContent: 'center',
+ gap: '25.2px', 
+ justifyContent: 'center', 
  alignItems: 'center'
  }}>
  <div style={{ 
  display: 'flex', 
- flexDirection: 'row', 
- gap: '10px'
+ flexDirection: 'row',
+ gap:"4.2px"
  }}>
- <p style={{ color: '#4186E5', fontSize: '22px' }}>{HMR}</p>
+ <img src={dis.src} alt="Image" style={{ height: "25.2px" }} />
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{HMR}</p>
  </div>
  </div>
+
  </div>
 
  <div style={{
  backgroundColor: '#E3F5FF',
  borderRadius: '8px', 
  boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', 
- maxWidth: '220px', 
+ maxWidth: '160px', 
  margin: '0 auto',
- flex: '1 1 calc(33% - 20px)',
+ flex: '1 1 calc(33% - 16.8px)', // Adjust for 3 items in a row
  minWidth: '150px'
  }}>
  <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Location</p>
  <div style={{
- display: 'flex',
- flexDirection: 'row', 
- gap: '30px', 
- justifyContent: 'center',
- alignItems: 'center'
- }}>
- <div style={{
  display: 'flex', 
  flexDirection: 'row', 
- gap: '5px'
+ gap: '25.2px', 
+ justifyContent: 'center', 
+ alignItems: 'center'
  }}>
- <img src={loc.src} alt="Image" style={{ height: "27px", marginTop:"4px"}} />
- <p style={{ color: '#4186E5', fontSize: '22px' }}>{location.slice(0, 2).join(', ')}</p>
+ <div style={{ 
+ display: 'flex', 
+ flexDirection: 'row',
+ gap:"4.2px"
+ }}>
+ <img src={dis.src} alt="Image" style={{ height: "25.2px" }} />
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{location.slice(0, 2).join(', ')}</p>
  </div>
  </div>
- <p style={{ fontSize: "11px", margin: "3px" }}>
- {`${data[99]?.LATITUDE}`}° N, {`${data[99]?.LONGITUDE}`}° E
- </p>
+
  </div>
  </div>
  
@@ -404,7 +407,7 @@ async function getLocationFromCoordinates(
 
  <h2 style={{ fontSize: '25px', color: 'gray' }}>RPM</h2>
  <ResponsiveContainer width="100%" height={200}>
- <AreaChart data={data} syncId="rpmChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+ <AreaChart data={data} syncId="rpmChart" margin={{ top: 10, right: 50, left: 0, bottom: 20 }}>
  <CartesianGrid strokeDasharray="3 3" />
  <XAxis dataKey="TIME" />
  <YAxis label={{ value: 'RPM', angle: -90, position: 'insideLeft' }} domain={[0, 3500]} tickCount={6} />

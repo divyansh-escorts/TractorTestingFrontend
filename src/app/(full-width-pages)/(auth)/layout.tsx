@@ -25,7 +25,7 @@ export default function AuthLayout({
                   <Image
                     width={2001}
                     height={48}
-                    src="/images/image.webp"
+                    src="/images/left-angle.webp"
                     alt="Logo"
                   />
                 </Link>

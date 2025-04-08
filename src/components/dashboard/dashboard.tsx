@@ -17,11 +17,13 @@ function createData(
  id: number,
  tractor_name: string,
  tractor_number: string,
+ registered: string,
  distance: number,
+ distanceToday: number,
  status: string,
  view: string
 ) {
- return { id, tractor_name, tractor_number, distance, status , view};
+ return { id, tractor_name, tractor_number,registered, distance, distanceToday, status , view};
 }
 
 interface ChartData {
@@ -40,14 +42,13 @@ interface ChartData {
 
 export default function Dashboard() {
  const router = useRouter();
- const [Data, setData] = React.useState<ChartData[]>([]);
  const [status, setStatus] = React.useState<string>("Stopped");
  
  const rows = [
- createData(1, '35 Champion', 'HR51 B 5643', 98, `${status}`,"yes"),
- createData(2, 'Steeltrac 15', 'HR 51 A 0002', 103, 'Stopped','no'),
- createData(3, 'Euro 24G', 'HR 51 A 0003', 88, 'Stopped','no'),
- createData(4, '439 RDX', 'HR 51 A 0004', 72, 'Stopped','no'),
+ createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',871, 3.30, `${status}`,"yes"),
+ createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-',0, 0, 'Stopped','no'),
+ createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-',0,0 ,'Stopped','no'),
+ createData(4, 'FT 6065', 'N/A', '-',0,0 ,'Stopped','no'),
  ];
  function addTimeToCurrentTime(currentTime:string) {
  const additionalTime = "5:30"
@@ -189,7 +190,13 @@ export default function Dashboard() {
  Tractor Number
  </TableCell>
  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
- Distance Covered
+ Testing Initiated On
+ </TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ Distance Travelled
+ </TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ Distance Travelled Today
  </TableCell>
  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
  Status
@@ -213,7 +220,9 @@ export default function Dashboard() {
  </TableCell>
  <TableCell align="right">{row.tractor_name}</TableCell>
  <TableCell align="right">{row.tractor_number}</TableCell>
- <TableCell align="right">{row.distance}</TableCell>
+ <TableCell align="right">{row.registered}</TableCell>
+ <TableCell align="right">{row.distance} km</TableCell>
+ <TableCell align="right">{row.distanceToday} km</TableCell>
  <TableCell align="right">
  <Box
  sx={{
@@ -230,7 +239,7 @@ export default function Dashboard() {
  <TableCell align="right">
  {row.view==="yes"?<Button
  onClick={() => {
- router.push(`/`); 
+ router.push(`/tracking`); 
  }}
  variant="contained"
  color="primary"

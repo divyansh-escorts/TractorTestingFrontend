@@ -14,6 +14,8 @@ import {
 LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Brush, AreaChart, Area, ResponsiveContainer
 } from 'recharts';
 import axios from "axios";
+import { Box, Card, Divider, Table, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+// import dayjs from 'dayjs';
 
 interface WebSocketData {
 DEVICE_ID: string;
@@ -34,6 +36,13 @@ FUEL_LEVEL: number;
 SPEED: number;
 ENGINE_RPM: number;
 }
+
+interface TableData {
+ date: string;
+ hmr: string;
+ distance:string;
+ location:string;
+ }
 
 interface _Data {
 TIME: string;
@@ -70,9 +79,9 @@ interface AssetTrackerMessage {
 
 const customIcon = L.icon({
 iconUrl: 'images/loaction.png', // put your image path here
-iconSize: [32, 32], // size of the icon
-iconAnchor: [16, 32], // point of the icon which will correspond to marker's location
-popupAnchor: [0, -32] // point from which the popup should open relative to the iconAnchor
+iconSize: [16, 16], // size of the icon
+iconAnchor: [8, 18], // point of the icon which will correspond to marker's location
+popupAnchor: [0, -16] // point from which the popup should open relative to the iconAnchor
 });
 
 
@@ -103,7 +112,7 @@ return null;
 const LiveMap = () => {
 const [positions, setPositions] = useState<LatLngTuple[]>([]); // Default: Nashik
 const [center, setCenter] = useState<LatLngExpression>(); 
-const [data, setData] = useState<ChartData[]>([]);
+const [Data, setData] = useState<ChartData[]>([]);
 const [brushIndices, setBrushIndices] = useState<{ startIndex: number, endIndex: number }>({ startIndex: 0, endIndex: 20 });
 const [disPositions, setDisPositions] = useState<number[][]>([]);
 const [totalDistance, setTotalDistance] = useState<number>(0);
@@ -112,9 +121,14 @@ const [time, setTime] = useState<string>();
 const [speed, setSpeed] = useState<number>(0); 
 const [lat, setLat] = useState<number>(0);
 const [long, setLong] = useState<number>(0);
+const [HMR, setHMR] = useState<string>("0"); 
+const [status, setStatus] = useState<string>("Stopped");
+const [tableData, setTableData] = useState<TableData[]>([]);
 
 const latRef = useRef(lat);
 const longRef = useRef(long);
+
+
 
 // Update latRef and longRef on state change
 useEffect(() => {
@@ -153,16 +167,38 @@ function calculateDecimal(number: number): string {
  const [integerPart, decimalPart] = number.toString().split(".")
  const result = (parseInt(decimalPart) / 60); 
  const res = result.toString().replace('.', '');
- const firstFourDigits = res.slice(0, 4);
- const afterDecimal = parseInt(firstFourDigits)
- const data = `${Math.floor(number)}.${afterDecimal}`
+ const firstSixDigits = res.slice(0, 6);
+ const afterDecimal = parseInt(firstSixDigits)
  return `${Math.floor(number)}.${afterDecimal}`;
 }
 
+const timeToSeconds = (time: string): number => {
+ const [hours, minutes, seconds] = time.split(':').map(Number);
+ return hours * 3600 + minutes * 60 + seconds;
+};
+
+const secondsToTime = (seconds: number): string => {
+ const hours = Math.floor(seconds / 3600);
+ const minutes = Math.floor((seconds % 3600) / 60);
+ const secs = seconds % 60;
+
+ return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};
+
+const getStatusStyle = (status: string) => {
+ switch (status) {
+ case 'Running':
+ return { backgroundColor: '#4caf50', color: 'white' }; // Green for Running
+ case 'Stopped':
+ return { backgroundColor: '#f44336', color: 'white' }; // Red for Stopped
+ default:
+ return { backgroundColor: '#9e9e9e', color: 'white' }; // Grey for unknown status
+ }
+ };
 
 useEffect(() => {
  setData([])
-
+ let HMR = 0
  const fetchDetails = async () => {
  try {
  
@@ -220,9 +256,20 @@ useEffect(() => {
  const lon1 = parseFloat(current.LONGITUDE);
  const lat2 = parseFloat(next.LATITUDE);
  const lon2 = parseFloat(next.LONGITUDE);
- 
- totalDistance += haversine(lat1, lon1, lat2, lon2);
+ if(next.TIME != "Error: Invalid time format" && current.TIME != "Error: Invalid time format"){
+ const dif = timeToSeconds(next.TIME) - timeToSeconds(current.TIME)
+ if(lat1 != lat2 || lon1 != lon2){
+ if(dif<=1200 && dif >= -1200){
+ HMR += dif
  }
+ }
+ }
+ totalDistance += haversine(lat1, lon1, lat2, lon2);
+
+ 
+ }
+ console.log(secondsToTime(HMR))
+ setHMR(secondsToTime(HMR))
  setTotalDistance(totalDistance)
 
  if (newData?.length > 0) {
@@ -244,7 +291,23 @@ useEffect(() => {
  fetchDetails(); 
  }, []);
 
+ useEffect(() => {
+ const fetchDetails = async () => {
+ try {
+ const res = await axios.get(`http://10.233.64.61:3302/tripData/getTractorHistory/414`);
+ console.log(res.data.resp)
+ setTableData(res.data.resp)
+ }
+ catch(err){
+ console.log(err)
+ }
+ }
 
+ fetchDetails(); 
+ }, []);
+
+
+ let allData : ChartData[] = []
 useEffect(() => {
 const socket = new WebSocket("wss://fdcserver.escortskubota.com/ws/"); // Change to your WebSocket server
 socket.onopen = () => {
@@ -255,6 +318,7 @@ socket.onmessage = (event) => {
 try {
  console.log("Event data",event?.data)
  const data = JSON.parse(event?.data);
+ if(Data.length == 0 || Data[Data.length-1].TIME != data.TIME)
  if (data && 
  data.DEVICE_ID && 
  data.LATITUDE!=="0.0000"&&
@@ -280,13 +344,18 @@ try {
  ENGINE_RPM: parseFloat(data.ENGINE_RPM),
  },
  ];
+
+ allData.push(...updatedData)
  setLat(parseFloat(data.LATITUDE))
  setLong(parseFloat(data.LONGITUDE))
+ console.log(data.SPEED)
+ console.log(typeof data.SPEED)
  setSpeed(parseFloat(data.SPEED))
  return updatedData;
- });
+ }); 
  }
 console.log(data);
+
 
 if (data.LATITUDE && data.LONGITUDE && data.LATITUDE!=="0.000000"&& data.LONGITUDE!=="0.000000" && data.LATITUDE!=="0.0000" && data.LONGITUDE!=="0.0000") {
 console.log("New Position:", data.LATITUDE, data.LONGITUDE);
@@ -325,6 +394,74 @@ return () => {
 socket.close();
 };
 }, []);
+
+
+
+function checkStatus() {
+ console.log(allData.length)
+ if(allData.length>0){
+ let allDataLength = allData.length;
+ console.log(allDataLength)
+ let lastPos = allData[allDataLength-1];
+ let lastTime = timeToSeconds(lastPos?.TIME);
+ const currentDate = new Date();
+ const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
+ console.log(currentTime); 
+ if(currentTime-lastTime<=30){
+ setStatus("Running")
+ console.log("running")
+ }
+ else{
+ setStatus("Stopped")
+ console.log("stopped")
+ }
+ }
+ else{
+ setStatus("Stopped")
+ console.log("Stopped 1")
+ }
+}
+
+ useEffect(() => {
+ console.log("i m in")
+ const intervalId = setInterval(checkStatus, 30000);
+ return () => {
+ clearInterval(intervalId);
+ };
+ }, []);
+
+
+useEffect(()=>{
+ try{
+ if(Data){
+ let distance = totalDistance
+ let newHMR = timeToSeconds(HMR)
+ let allDataLenght = Data.length
+ let last = Data[allDataLenght-1]
+ let secondLast = Data[allDataLenght-2]
+ 
+ const lat1 = parseFloat(last?.LATITUDE);
+ const lon1 = parseFloat(last?.LONGITUDE);
+ const lat2 = parseFloat(secondLast?.LATITUDE);
+ const lon2 = parseFloat(secondLast?.LONGITUDE);
+ if(last?.TIME != "Error: Invalid time format" && secondLast?.TIME != "Error: Invalid time format"){
+ const dif = timeToSeconds(last?.TIME) - timeToSeconds(secondLast?.TIME)
+ if(lat1 != lat2 || lon1 != lon2){
+ if(dif<=1200 && dif >= -1200){
+ newHMR += dif
+ }
+ }
+ distance += haversine(lat1, lon1, lat2, lon2);
+ setTotalDistance(distance)
+ setHMR(secondsToTime(newHMR))
+ }
+ }
+ 
+ }
+ catch(err){
+ console.log(err)
+ }
+},[Data])
 
 const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
  const R = 6371; // Radius of Earth in km
@@ -379,113 +516,167 @@ const fetchLocation = async () => {
 const latestPosition:LatLngTuple = positions.length > 0 ? positions[0] : [19.9975, 73.7898];
 
 return (
+<div>
+
+ 
 <div style={{ display: 'flex', width: '100%' }}>
+
+
 {/* Left side: Stats Section */}
 <div style={{
-flex: 1, // Make it take up 50% of the container
-display: 'flex',
-flexDirection: 'column',
-margin:'20px'
+ flex: 1, // Keep flex as is
+ display: 'flex',
+ flexDirection: 'column',
+ margin: '16.8px' // 5% increase of 16px
 }}>
-<div style={{display:'flex'}}>
-<div style={{
-backgroundColor: '#E3F5FF',
-borderRadius: '8px',
-boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-maxWidth: '190px',
-margin: '0 auto',
-flex: '1 1 calc(33% - 20px)', // Adjust for 3 items in a row
-minWidth: '150px'
-}}>
-<p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Distance travelled</p>
-<div style={{
-display: 'flex',
-flexDirection: 'row',
-gap: '30px',
-justifyContent: 'center',
-alignItems: 'center'
-}}>
-<div style={{
-display: 'flex',
-flexDirection: 'row',
-gap:"5px"
-}}>
-<img src={dis.src} alt="Image" style={{ height: "30px" }} />
-<p style={{ color: '#4186E5', fontSize: '22px' }}>{totalDistance.toFixed(2)} KM</p>
-</div>
-</div>
-</div>
 
-<div style={{
-backgroundColor: '#E3F5FF',
-borderRadius: '8px',
-boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-maxWidth: '190px',
-margin: '0 auto',
-flex: '1 1 calc(33% - 20px)',
-minWidth: '150px'
-}}>
-<p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Current speed</p>
-<div style={{
-display: 'flex',
-flexDirection: 'row',
-gap: '30px',
-justifyContent: 'center',
-alignItems: 'center'
-}}>
-<div style={{
-display: 'flex',
-flexDirection: 'row',
-gap: '5px'
-}}>
-<img src={speedImage.src} alt="Image" style={{ height: "27px", marginTop:"4px"}} />
-<p style={{ color: '#4186E5', fontSize: '22px' }}>{speed} kmph</p>
-</div>
-</div>
-</div>
 
-<div style={{
-backgroundColor: '#E3F5FF',
-borderRadius: '8px',
-boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-maxWidth: '190px',
-margin: '0 auto',
-flex: '1 1 calc(33% - 20px)',
-minWidth: '150px'
-}}>
-<p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '10px', fontSize: '13px', width: '100%' }}>Live location</p>
-<div style={{
-display: 'flex',
-flexDirection: 'row',
-gap: '30px',
-justifyContent: 'center',
-alignItems: 'center'
-}}>
-<div style={{
-display: 'flex',
-flexDirection: 'row',
-gap: '5px'
-}}>
-<img src={loc.src} alt="Image" style={{ height: "27px", marginTop:"4px"}} />
-<p style={{ color: '#4186E5', fontSize: '22px' }}>{location.slice(0, 2).join(', ')}</p>
-</div>
-</div>
-<p style={{fontSize: "11px", margin:"3px"}}>{`${lat}`}° N, {`${long}`}° E</p>
-</div>
-</div>
+
+ <div style={{ display: 'flex' }}>
+ {/* Distance Travelled */}
+ <div style={{
+ backgroundColor: '#E3F5FF',
+ borderRadius: '8px',
+ boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+ maxWidth: '160px', // 5% increase of 152px
+ margin: '0 auto',
+ flex: '1 1 calc(33% - 16.8px)', // Adjust for 3 items in a row
+ minWidth: '100px' // 5% increase of 96px
+ }}>
+ <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '8.4px', fontSize: '13px', width: '100%' }}>Distance travelled</p> {/* 5% increase of 8px */}
+ <div style={{
+ display: 'flex',
+ flexDirection: 'row',
+ gap: '25.2px', // 5% increase of 24px
+ justifyContent: 'center',
+ alignItems: 'center'
+ }}>
+ <div style={{
+ display: 'flex',
+ flexDirection: 'row',
+ gap: '4.2px' // 5% increase of 4px
+ }}>
+ <img src={dis.src} alt="Image" style={{ height: "25.2px" }} /> {/* 5% increase of 24px */}
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{totalDistance.toFixed(2)} KM</p> {/* 5% increase of 16px */}
+ </div>
+ </div>
+ </div>
+
+ {/* Current Speed */}
+ <div style={{
+ backgroundColor: '#E3F5FF',
+ borderRadius: '8px',
+ boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+ maxWidth: '160px', // 5% increase of 152px
+ margin: '0 auto',
+ flex: '1 1 calc(33% - 16.8px)', // Adjust for 3 items in a row
+ minWidth: '126px' // 5% increase of 120px
+ }}>
+ <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '8.4px', fontSize: '13px', width: '100%' }}>Current speed</p> {/* 5% increase of 8px */}
+ <div style={{
+ display: 'flex',
+ flexDirection: 'row',
+ gap: '25.2px', // 5% increase of 24px
+ justifyContent: 'center',
+ alignItems: 'center'
+ }}>
+ <div style={{
+ display: 'flex',
+ flexDirection: 'row',
+ gap: '4.2px' // 5% increase of 4px
+ }}>
+ <img src={speedImage.src} alt="Image" style={{ height: "23.1px", marginTop: "4px" }} /> {/* 5% increase of 22px */}
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{speed.toFixed(2)} kmph</p> {/* 5% increase of 16px */}
+ </div>
+ </div>
+ </div>
+
+ {/* HMR */}
+ <div style={{
+ backgroundColor: '#E3F5FF',
+ borderRadius: '8px',
+ boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+ maxWidth: '160px', // 5% increase of 152px
+ margin: '0 auto',
+ flex: '1 1 calc(33% - 16.8px)', // Adjust for 3 items in a row
+ minWidth: '126px' // 5% increase of 120px
+ }}>
+ <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '8.4px', fontSize: '13px', width: '100%' }}>HMR</p> {/* 5% increase of 8px */}
+ <div style={{
+ display: 'flex',
+ flexDirection: 'row',
+ gap: '25.2px', // 5% increase of 24px
+ justifyContent: 'center',
+ alignItems: 'center'
+ }}>
+ <div style={{
+ display: 'flex',
+ flexDirection: 'row',
+ gap: '4.2px' // 5% increase of 4px
+ }}>
+ <img src={speedImage.src} alt="Image" style={{ height: "23.1px", marginTop: "4px" }} /> {/* 5% increase of 22px */}
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{HMR}</p> {/* 5% increase of 16px */}
+ </div>
+ </div>
+ </div>
+
+ {/* Live Location */}
+ <div style={{
+ backgroundColor: '#E3F5FF',
+ borderRadius: '8px',
+ boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+ maxWidth: '160px', // 5% increase of 152px
+ margin: '0 auto',
+ flex: '1 1 calc(33% - 16.8px)', // Adjust for 3 items in a row
+ minWidth: '126px' // 5% increase of 120px
+ }}>
+ <p style={{ fontWeight: 'bold', borderRadius: '8px', color: 'Black', padding: '8.4px', fontSize: '13px', width: '100%' }}>Live location</p> {/* 5% increase of 8px */}
+ <div style={{
+ display: 'flex',
+ flexDirection: 'row',
+ gap: '25.2px', // 5% increase of 24px
+ justifyContent: 'center',
+ alignItems: 'center'
+ }}>
+ <div style={{
+ display: 'flex',
+ flexDirection: 'row',
+ gap: '4.2px' // 5% increase of 4px
+ }}>
+ <img src={loc.src} alt="Image" style={{ height: "23.1px", marginTop: "4px" }} /> {/* 5% increase of 22px */}
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{location.slice(0, 2).join(', ')}</p> {/* 5% increase of 16px */}
+ </div>
+ </div>
+ </div>
+ </div>
+
+
 <Map center={positions[0]} zoom={20} style={{ height: "500px", width: "100%", marginTop:"20px" }}>
 <TileLayer
  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
  />
- <UpdateMapView position={latestPosition} />
+<UpdateMapView position={latestPosition} />
 
- {/* Render all markers */}
- {positions.map((pos, index) => (
- <MarkerComp key={index} position={pos} icon={customIcon} >
+{/* Render all markers */}
+{positions.map((pos, index) => {
+ const isLast = index === positions.length - 1;
+
+ const icon = isLast
+ ? L.icon({
+ iconUrl: 'images/tractor.svg', // icon for the last point
+ iconSize: [32, 32],
+ iconAnchor: [16, 16],
+ popupAnchor: [0, -16],
+ })
+ : customIcon; // default icon for other points
+
+ return (
+ <MarkerComp key={index} position={pos} icon={icon}>
  <PopupComp>Point {index + 1}: {pos[0]}, {pos[1]}</PopupComp>
  </MarkerComp>
- ))}
+ );
+})}
  {/* Draw a polyline connecting the points */}
  {positions.length > 1 && (
  <PolylineComp positions={positions} color="blue" weight={3} />
@@ -503,7 +694,7 @@ flexDirection: 'column'
 <div style={{ width: '100%' }}>
 <h2 style={{ fontSize: '25px', color: 'gray' }}>Fuel Level</h2>
 <ResponsiveContainer width="100%" height={200} >
-<LineChart data={data} syncId="fuelChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+<LineChart data={Data} syncId="fuelChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
 <CartesianGrid strokeDasharray="3 3" />
 <XAxis dataKey="TIME" />
 <YAxis label={{ value: 'Fuel (%)', angle: -90, position: 'insideLeft' }} domain={[0, 100]} tickCount={6} />
@@ -515,7 +706,7 @@ flexDirection: 'column'
 
 <h2 style={{ fontSize: '25px', color: 'gray' }}>Speed</h2>
 <ResponsiveContainer width="100%" height={200}>
-<LineChart data={data} syncId="speedChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+<LineChart data={Data} syncId="speedChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
 <CartesianGrid strokeDasharray="3 3" />
 <XAxis dataKey="TIME" />
 <YAxis label={{ value: 'Speed km/h', angle: -90, position: 'insideLeft' }} domain={[0, 60]} tickCount={6} />
@@ -527,7 +718,7 @@ flexDirection: 'column'
 
 <h2 style={{ fontSize: '25px', color: 'gray' }}>RPM</h2>
 <ResponsiveContainer width="100%" height={200}>
-<AreaChart data={data} syncId="rpmChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+<AreaChart data={Data} syncId="rpmChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
 <CartesianGrid strokeDasharray="3 3" />
 <XAxis dataKey="TIME" />
 <YAxis label={{ value: 'RPM', angle: -90, position: 'insideLeft' }} domain={[0, 3000]} tickCount={6} />
@@ -539,7 +730,38 @@ flexDirection: 'column'
 </div>
 </div>
 </div>
-
+<Box sx={{ padding: 2 }}>
+ <Card sx={{overflow:'scroll', height:'40vh'}}>
+ <Divider />
+ <Table stickyHeader>
+ {!tableData.length?<caption>No Previous Data</caption>:<></>}
+ <TableHead sx={{ position: 'sticky', top: 0}}>
+ <TableRow>
+ <TableCell sx={{fontWeight:'bold', color: '#000000 !important'}} align="center" colSpan={5}>Previous Trips</TableCell>
+ </TableRow>
+ <TableRow>
+ <TableCell sx={{color: '#000000 !important'}}>Date</TableCell>
+ <TableCell sx={{color: '#000000 !important'}}>HMR</TableCell>
+ <TableCell sx={{color: '#000000 !important'}}>Distance</TableCell>
+ <TableCell sx={{color: '#000000 !important'}}>Location</TableCell>
+ 
+ </TableRow>
+ </TableHead>
+ <TableBody>
+ {tableData && tableData?.map((e) => {
+ return(
+ <TableRow key={e.date}>
+ <TableCell>{e.date}</TableCell>
+ <TableCell>{e.hmr}</TableCell>
+ <TableCell>{e.distance} km</TableCell>
+ <TableCell>{e.location}</TableCell>
+ </TableRow>)
+})}
+ </TableBody>
+ </Table>
+ </Card>
+ </Box>
+</div>
 
 );
 };
