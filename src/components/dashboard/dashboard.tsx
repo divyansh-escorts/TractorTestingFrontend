@@ -1,31 +1,27 @@
-"use client";
-import * as React from 'react';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import { Button, Typography } from '@mui/material';
-import ViewIcon from '@mui/icons-material/RemoveRedEye';
-import { useRouter } from 'next/navigation';
-import { Box } from '@mui/system';
+"use client"
+import { TractorDetails } from "@/components/ecommerce/TractorDetails";
+import React, { useEffect, useState } from "react";
+// import Flatpickr from "react-flatpickr";
+import 'flatpickr/dist/themes/material_blue.css';
+// import LiveMap from "@/components/map/LiveMap";
+// import PathMap from "@/components/map/pathMap";
+import dynamic from "next/dynamic";
+import { Box, Card, CardContent, Typography } from "@mui/material";
 
-// Helper function to create data
-function createData(
- id: number,
- tractor_name: string,
- tractor_number: string,
- registered: string,
- distance: number,
- distanceToday: number,
- status: string,
- view: string
-) {
- return { id, tractor_name, tractor_number,registered, distance, distanceToday, status , view};
+
+const LiveMap = dynamic(() => import('@/components/map/LiveMap'), { ssr: false });
+const PathMap = dynamic(() => import('@/components/map/pathMap'), { ssr: false });
+const Flatpickr = dynamic(() => import('react-flatpickr'), { ssr: false });
+
+interface Data {
+ TIME: string;
+ DEVICE_ID: string;
+ LATITUDE:string;
+ LONGITUDE:string
+ FUEL_LEVEL: string;
+ SPEED: string;
+ ENGINE_RPM: string;
 }
-
 interface ChartData {
  name: string;
  TIME: string;
@@ -38,18 +34,43 @@ interface ChartData {
  ENGINE_RPM: number;
  }
 
-// Sample data for the table
+export default function Tracking() {
+ const [newData, setNewData] = useState<Data>(Object);
+ const[ date, setDate] = useState<string>('')
+ const [today, setToday] = useState(new Date().toISOString().split('T')[0]);
+ const [status, setStatus] = useState<string>("Stopped");
 
-export default function Dashboard() {
- const router = useRouter();
- const [status, setStatus] = React.useState<string>("Stopped");
+ const getStatusStyle = (status: string) => {
+ switch (status) {
+ case 'Running':
+ return { backgroundColor: '#4caf50', color: 'white' }; // Green for Running
+ case 'Ignition On':
+ return { backgroundColor: '#FFFF00', color: 'white' };
+ case 'Cranked & Halted':
+ return { backgroundColor: '#FFA500', color: 'white' };
+ case 'Stopped':
+ return { backgroundColor: '#f44336', color: 'white' }; // Red for Stopped
+ default:
+ return { backgroundColor: '#9e9e9e', color: 'white' }; // Grey for unknown status
+ }
+ };
+
+ const handleDateChange = (date: any) => {
+ const selectedDate = new Date(date[0]); // Get the selected date
+ selectedDate.setDate(selectedDate.getDate() + 1); // Increase by 1 day
  
- const rows = [
- createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',871, 3.30, `${status}`,"yes"),
- createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-',0, 0, 'Stopped','no'),
- createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-',0,0 ,'Stopped','no'),
- createData(4, 'FT 6065', 'N/A', '-',0,0 ,'Stopped','no'),
- ];
+ // Format the date as YYYY-MM-DD
+ const newDate = selectedDate.toISOString().split('T')[0]; 
+ 
+ console.log(newDate);
+ setDate(newDate); // Set the updated date
+ };
+ 
+ useEffect(() => {
+ // You can also check and update the date if necessary
+ setToday(new Date().toISOString().split('T')[0]);
+ console.log(new Date().toISOString().split('T')[0])
+ }, []);
  function addTimeToCurrentTime(currentTime:string) {
  const additionalTime = "5:30"
  const time = currentTime.match(/(\d{2}:\d{2}:\d{2})/)?.[0];
@@ -142,9 +163,19 @@ export default function Dashboard() {
  const currentDate = new Date();
  const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
  console.log(currentTime); 
- if(currentTime-lastTime<=30){
+ if(lastPos.ENGINE_RPM<650){
+ setStatus("Ignition On")
+ }
+ else if(lastPos.ENGINE_RPM>=650){
+ setStatus("Cranked & Halted")
+ }
+ if(allData.length>1){
+ let lastPostion = allData[allData.length-1];
+ let secondLast = allData[allData.length-2];
+ 
+ if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME) <= 30){
  setStatus("Running")
- console.log("running")
+ }
  }
  else{
  setStatus("Stopped")
@@ -157,6 +188,7 @@ export default function Dashboard() {
  }
  }
 
+
  React.useEffect(() => {
  console.log("i m in")
  const intervalId = setInterval(checkStatus, 30000);
@@ -164,102 +196,84 @@ export default function Dashboard() {
  clearInterval(intervalId);
  };
  }, []);
+ 
 
 
- const getStatusStyle = (status: string) => {
- switch (status) {
- case 'Running':
- return { backgroundColor: '#4caf50', color: 'white' }; // Green for Running
- case 'Stopped':
- return { backgroundColor: '#f44336', color: 'white' }; // Red for Stopped
- default:
- return { backgroundColor: '#9e9e9e', color: 'white' }; // Grey for unknown status
- }
- };
  return (
- <Box sx={{ p: 3 }}>
- <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
- <Table sx={{ minWidth: 650 }} aria-label="tractor data table">
- <TableHead>
- <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
- <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
- <TableCell align="right" sx={{ fontWeight: 'bold' }}>
- Tractor Name
- </TableCell>
- <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ <div className="grid grid-cols-12 gap-4 md:gap-6">
+ 
+ <div className="col-span-12 xl:col-span-6">
+ <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-5">
+ {/* Metric Item Start */}
+ <Card sx={{ 
+ borderRadius: 3, 
+ boxShadow: 3, 
+ transform: "scale(0.8)", 
+ width: '100%' // Ensure the Card takes full width of its container
+ }}>
+ <CardContent>
+ <Box sx={{ paddingTop: "6px" }} display="flex" justifyContent="space-between" alignItems="center">
+ <Typography sx={{ color: "black", fontSize: "1rem" }} variant="body2" color="text.secondary">
  Tractor Number
- </TableCell>
- <TableCell align="right" sx={{ fontWeight: 'bold' }}>
- Testing Initiated On
- </TableCell>
- <TableCell align="right" sx={{ fontWeight: 'bold' }}>
- Distance Travelled
- </TableCell>
- <TableCell align="right" sx={{ fontWeight: 'bold' }}>
- Distance Travelled Today
- </TableCell>
- <TableCell align="right" sx={{ fontWeight: 'bold' }}>
- Status
- </TableCell>
- <TableCell align="right" sx={{ fontWeight: 'bold' }}>View</TableCell>
- </TableRow>
- </TableHead>
+ </Typography>
+ <Typography variant="h6" fontWeight="bold" color="text.primary" sx={{ fontSize: "1.2rem" }}>
+ HR 51 TC 2004/45/25
+ </Typography>
+ </Box>
+ </CardContent>
+ </Card>
 
- <TableBody>
- {rows.map((row) => (
- <TableRow
- key={row.id}
- sx={{
- '&:last-child td, &:last-child th': { border: 0 },
- backgroundColor: row.id % 2 === 0 ? '#fafafa' : 'white', // Alternate row colors
- '&:hover': { backgroundColor: '#f1f1f1' }, // Hover effect
- }}
- >
- <TableCell component="th" scope="row" sx={{ fontWeight: 500 }}>
- {row.id}
- </TableCell>
- <TableCell align="right">{row.tractor_name}</TableCell>
- <TableCell align="right">{row.tractor_number}</TableCell>
- <TableCell align="right">{row.registered}</TableCell>
- <TableCell align="right">{row.distance} km</TableCell>
- <TableCell align="right">{row.distanceToday} km</TableCell>
- <TableCell align="right">
+ {/* Status Box */}
+ {
+ (date === today || !date) ? (
  <Box
  sx={{
- display: 'inline-block',
+ width: '85px', // Increased width for the status box
  padding: '4px 12px',
+ margin: '20px',
  borderRadius: '12px',
  opacity: 0.9,
- ...getStatusStyle(row.status), // Apply dynamic styles
+ ...getStatusStyle(status), // Assuming this is a function that dynamically adjusts styles
  }}
  >
- {row.status}
+ {status}
  </Box>
- </TableCell>
- <TableCell align="right">
- {row.view==="yes"?<Button
- onClick={() => {
- router.push(`/tracking`); 
+ ) : (
+ <></> // This renders nothing when the condition is false
+ )
+ }
+ </div>
+ </div>
+
+
+ {/* Date Picker & Select in One Row */}
+ <div className="col-span-12 xl:col-span-6">
+ <div style={{padding: "18px"}} className="grid grid-cols-1 gap-4 md:gap-6">
+ <div>
+ <Flatpickr
+ options={{
+ dateFormat: "Y-m-d", // Set the date format
  }}
- variant="contained"
- color="primary"
- startIcon={<ViewIcon />}
- sx={{
- padding: '6px 16px',
- borderRadius: '4px',
- '&:hover': {
- backgroundColor: '#1565c0',
- },
- }}
- >
- View
- </Button>:<></>}
- </TableCell>
- </TableRow>
- ))}
- </TableBody>
- </Table>
- </TableContainer>
- </Box>
+ placeholder="Choose a date"
+ className="w-full py-2 pl-3 pr-10 text-sm border border-gray-300 rounded-md h-11 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+ onChange={handleDateChange} // Handle date change
+ />
+ </div>
+ </div>
+ </div>
+
+ 
+
+ <div className="col-span-12 mt-5">
+ {(date === today || !date) ? <LiveMap /> : <PathMap date={date} />}
+ </div>
+ {/* Demographics & Orders */}
+ {/* <div className="col-span-12 xl:col-span-6">
+ <GraphData newData={newData}/>
+ </div> */}
+ <div className="col-span-12 xl:col-span-7">
+ {/* <RecentOrders /> */}
+ </div>
+ </div>
  );
 }

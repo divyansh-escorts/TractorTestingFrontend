@@ -48,7 +48,7 @@ export default function SignInForm() {
  console.log("Form data with hardcoded userId and password: ", submissionData);
  if(submissionData.email==='user@example.com' && submissionData.password==='123456'){
  console.log("User signed in successfully");
- router.push(`/dashboard`);
+ router.push(`/`);
  }
 
  } catch (err) {

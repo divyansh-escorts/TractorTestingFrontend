@@ -101,7 +101,7 @@
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="TIME" />
             <YAxis
-              label={{ value: 'Speed km/h', angle: -90, position: 'insideLeft' }}
+              label={{ value: 'km/h', angle: -90, position: 'insideLeft' }}
               domain={[0, 60]}
               tickCount={6}
             />

@@ -11,6 +11,7 @@ import { Button, Typography } from '@mui/material';
 import ViewIcon from '@mui/icons-material/RemoveRedEye';
 import { useRouter } from 'next/navigation';
 import { Box } from '@mui/system';
+import axios from 'axios';
 
 // Helper function to create data
 function createData(
@@ -18,7 +19,7 @@ function createData(
  tractor_name: string,
  tractor_number: string,
  registered: string,
- distance: number,
+ distance: string,
  distanceToday: number,
  status: string,
  view: string
@@ -38,17 +39,27 @@ interface ChartData {
  ENGINE_RPM: number;
  }
 
+ interface TableData {
+ date: string;
+ hmr: string;
+ distance:string;
+ location:string;
+ }
+
 // Sample data for the table
 
 export default function Dashboard() {
  const router = useRouter();
  const [status, setStatus] = React.useState<string>("Stopped");
- 
+ const [tableData, setTableData] = React.useState<TableData[]>([]);
+ const [totalDistance, setTotalDistance] = React.useState<number>(0)
+ const [allData, setAllData] = React.useState<ChartData[]>([]);
+
  const rows = [
- createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',871, 3.30, `${status}`,"yes"),
- createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-',0, 0, 'Stopped','no'),
- createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-',0,0 ,'Stopped','no'),
- createData(4, 'FT 6065', 'N/A', '-',0,0 ,'Stopped','no'),
+ createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',`${totalDistance}`, 3.30, `${status}`,"yes"),
+ createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-','0', 0, 'Stopped','no'),
+ createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-','0',0 ,'Stopped','no'),
+ createData(4, 'FT 6065', 'N/A', '-','0',0 ,'Stopped','no'),
  ];
  function addTimeToCurrentTime(currentTime:string) {
  const additionalTime = "5:30"
@@ -73,8 +84,6 @@ export default function Dashboard() {
  return hours * 3600 + minutes * 60 + seconds;
  };
  
- let allData : ChartData[] = []
-
  React.useEffect(() => {
  const socket = new WebSocket("wss://fdcserver.escortskubota.com/ws/"); // Change to your WebSocket server
  socket.onopen = () => {
@@ -131,6 +140,25 @@ export default function Dashboard() {
  };
  }, []);
 
+ React.useEffect(() => {
+ const fetchDetails = async () => {
+ try {
+ const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/414`);
+ console.log(res.data.resp)
+ const totalDistance = res.data.resp.reduce((sum:number, item:any) => {
+ return sum + parseFloat(item.distance);
+ }, 0);
+ setTableData(res.data.resp)
+ setTotalDistance(totalDistance)
+ }
+ catch(err){
+ console.log(err)
+ }
+ }
+ 
+ fetchDetails(); 
+ }, []);
+
 
  function checkStatus() {
  console.log(allData.length)
@@ -142,9 +170,19 @@ export default function Dashboard() {
  const currentDate = new Date();
  const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
  console.log(currentTime); 
- if(currentTime-lastTime<=30){
+ if(lastPos.ENGINE_RPM<650){
+ setStatus("Ignition On")
+ }
+ else if(lastPos.ENGINE_RPM>=650){
+ setStatus("Cranked & Halted")
+ }
+ if(allData.length>1){
+ let lastPostion = allData[allData.length-1];
+ let secondLast = allData[allData.length-2];
+ 
+ if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME) <= 30){
  setStatus("Running")
- console.log("running")
+ }
  }
  else{
  setStatus("Stopped")
@@ -170,6 +208,10 @@ export default function Dashboard() {
  switch (status) {
  case 'Running':
  return { backgroundColor: '#4caf50', color: 'white' }; // Green for Running
+ case 'Ignition On':
+ return { backgroundColor: '#FFFF00', color: 'white' };
+ case 'Cranked & Halted':
+ return { backgroundColor: '#FFA500', color: 'white' };
  case 'Stopped':
  return { backgroundColor: '#f44336', color: 'white' }; // Red for Stopped
  default:

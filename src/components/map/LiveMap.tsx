@@ -15,7 +15,6 @@ LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Brush, AreaChart, Area, R
 } from 'recharts';
 import axios from "axios";
 import { Box, Card, Divider, Table, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
-// import dayjs from 'dayjs';
 
 interface WebSocketData {
 DEVICE_ID: string;
@@ -185,16 +184,6 @@ const secondsToTime = (seconds: number): string => {
  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 };
 
-const getStatusStyle = (status: string) => {
- switch (status) {
- case 'Running':
- return { backgroundColor: '#4caf50', color: 'white' }; // Green for Running
- case 'Stopped':
- return { backgroundColor: '#f44336', color: 'white' }; // Red for Stopped
- default:
- return { backgroundColor: '#9e9e9e', color: 'white' }; // Grey for unknown status
- }
- };
 
 useEffect(() => {
  setData([])
@@ -210,12 +199,21 @@ useEffect(() => {
  console.log(lastTimestamp)
 
  const newData = res.data
- .filter((item: any) => 
- item.message.LATITUDE !== '0.0000' && 
- item.message.LONGITUDE !== '0.0000' && 
- item.message.LATITUDE !== '0.000000' && 
- item.message.LONGITUDE !== '0.000000') 
- .map((item: any) => ({
+ .filter((item: any) => {
+ const latitude = item.message.LATITUDE;
+ const longitude = item.message.LONGITUDE;
+ 
+ return (
+ latitude !== '0.0000' && latitude !== '0.000000' &&
+ longitude !== '0.0000' && longitude !== '0.000000' &&
+ latitude !== '0' && longitude !== '0' &&
+ latitude !== null && longitude !== null
+ );
+ })
+ .map((item: any) => {
+ const updatedEngineRpm = item.message.ENGINE_RPM < 649 ? 0 : item.message.ENGINE_RPM;
+ 
+ return {
  "TIME": addTimeToCurrentTime(item.message.TIME),
  "DEVICE_ID": item.message.DEVICE_ID,
  "LATITUDE": calculateDecimal(item.message.LATITUDE),
@@ -223,12 +221,11 @@ useEffect(() => {
  "ALTITUDE": item.message.ALTITUDE,
  "SPEED": item.message.SPEED,
  "FUEL_LEVEL": item.message.FUEL_LEVEL,
- "ENGINE_RPM": item.message.ENGINE_RPM
- }))
- .filter((value:any, index:any, self:any) => {
- return index === self.findIndex((t:any) => (
- t.TIME === value.TIME
- ));
+ "ENGINE_RPM": updatedEngineRpm 
+ };
+ })
+ .filter((value: any, index: any, self: any) => {
+ return index === self.findIndex((t: any) => t.TIME === value.TIME);
  });
  
 
@@ -294,7 +291,7 @@ useEffect(() => {
  useEffect(() => {
  const fetchDetails = async () => {
  try {
- const res = await axios.get(`http://10.233.64.61:3302/tripData/getTractorHistory/414`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/414`);
  console.log(res.data.resp)
  setTableData(res.data.resp)
  }
@@ -341,7 +338,7 @@ try {
  ALTITUDE: data.ALTITUDE,
  FUEL_LEVEL: parseFloat(data.FUEL_LEVEL),
  SPEED: parseFloat(data.SPEED),
- ENGINE_RPM: parseFloat(data.ENGINE_RPM),
+ ENGINE_RPM: parseFloat(data.ENGINE_RPM) < 649 ? 0 : parseFloat(data.ENGINE_RPM),
  },
  ];
 
@@ -557,7 +554,7 @@ return (
  gap: '4.2px' // 5% increase of 4px
  }}>
  <img src={dis.src} alt="Image" style={{ height: "25.2px" }} /> {/* 5% increase of 24px */}
- <p style={{ color: '#4186E5', fontSize: '18px' }}>{totalDistance.toFixed(2)} KM</p> {/* 5% increase of 16px */}
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{totalDistance.toFixed(2)} km</p> {/* 5% increase of 16px */}
  </div>
  </div>
  </div>
@@ -709,7 +706,7 @@ flexDirection: 'column'
 <LineChart data={Data} syncId="speedChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
 <CartesianGrid strokeDasharray="3 3" />
 <XAxis dataKey="TIME" />
-<YAxis label={{ value: 'Speed km/h', angle: -90, position: 'insideLeft' }} domain={[0, 60]} tickCount={6} />
+<YAxis label={{ value: 'km/h', angle: -90, position: 'insideLeft' }} domain={[0, 60]} tickCount={6} />
 <Tooltip />
 <Brush height={20} startIndex={brushIndices.startIndex} onChange={handleBrushChange} />
 <Line type="monotone" dataKey="SPEED" stroke="#82ca9d" fill="#82ca9d" isAnimationActive={false} animationDuration={0} />
@@ -731,36 +728,42 @@ flexDirection: 'column'
 </div>
 </div>
 <Box sx={{ padding: 2 }}>
- <Card sx={{overflow:'scroll', height:'40vh'}}>
+ <Card sx={{ overflow: 'scroll', height: '40vh' }}>
  <Divider />
  <Table stickyHeader>
- {!tableData.length?<caption>No Previous Data</caption>:<></>}
- <TableHead sx={{ position: 'sticky', top: 0}}>
+ {!tableData.length ? <caption>No Previous Data</caption> : <></>}
+ <TableHead sx={{ position: 'sticky', top: 0 }}>
  <TableRow>
- <TableCell sx={{fontWeight:'bold', color: '#000000 !important'}} align="center" colSpan={5}>Previous Trips</TableCell>
+ <TableCell sx={{ fontWeight: 'bold', color: '#000000 !important' }} align="center" colSpan={5}>
+ Previous Trips
+ </TableCell>
  </TableRow>
  <TableRow>
- <TableCell sx={{color: '#000000 !important'}}>Date</TableCell>
- <TableCell sx={{color: '#000000 !important'}}>HMR</TableCell>
- <TableCell sx={{color: '#000000 !important'}}>Distance</TableCell>
- <TableCell sx={{color: '#000000 !important'}}>Location</TableCell>
- 
+ <TableCell sx={{ color: '#000000 !important' }}>Date</TableCell>
+ <TableCell sx={{ color: '#000000 !important' }}>HMR</TableCell>
+ <TableCell sx={{ color: '#000000 !important' }}>Distance</TableCell>
+ <TableCell sx={{ color: '#000000 !important' }}>Location</TableCell>
  </TableRow>
  </TableHead>
  <TableBody>
- {tableData && tableData?.map((e) => {
- return(
+ {tableData
+ // Sort by date in descending order (newest first)
+ // .sort((a, b) => new Date(b.date) - new Date(a.date))
+ .map((e) => {
+ return (
  <TableRow key={e.date}>
  <TableCell>{e.date}</TableCell>
  <TableCell>{e.hmr}</TableCell>
  <TableCell>{e.distance} km</TableCell>
  <TableCell>{e.location}</TableCell>
- </TableRow>)
-})}
+ </TableRow>
+ );
+ })}
  </TableBody>
  </Table>
  </Card>
- </Box>
+</Box>
+
 </div>
 
 );

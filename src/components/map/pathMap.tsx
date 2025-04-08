@@ -169,7 +169,10 @@ async function getLocationFromCoordinates(
  } 
  const newData = res.data.result[0]?.data
  .filter((item: any) => item.LATITUDE !== '0.000000' && item.LONGITUDE !== '0.000000'&& item.LATITUDE !== '0.0000' && item.LONGITUDE !== '0.0000') 
- .map((item: any) => ({
+ .map((item: any) => {
+ const updatedEngineRpm = item.ENGINE_RPM < 649 ? 0 : item.ENGINE_RPM;
+ 
+ return {
  "TIME": addTimeToCurrentTime(item.TIME),
  "DEVICE_ID": item.DEVICE_ID,
  "LATITUDE": calculateDecimal(item.LATITUDE),
@@ -177,8 +180,9 @@ async function getLocationFromCoordinates(
  "ALTITUDE": item.ALTITUDE,
  "SPEED": item.SPEED,
  "FUEL_LEVEL": item.FUEL_LEVEL,
- "ENGINE_RPM": item.ENGINE_RPM
- }))
+ "ENGINE_RPM": updatedEngineRpm 
+ };
+ })
  .filter((value:any, index:any, self:any) => {
  return index === self.findIndex((t:any) => (
  t.TIME === value.TIME
@@ -294,7 +298,7 @@ async function getLocationFromCoordinates(
  gap:"4.2px"
  }}>
  <img src={dis.src} alt="Image" style={{ height: "25.2px" }} />
- <p style={{ color: '#4186E5', fontSize: '18px' }}>{distance?.toFixed(2)} KM</p>
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{distance?.toFixed(2)} km</p>
  </div>
  </div>
 
@@ -398,7 +402,7 @@ async function getLocationFromCoordinates(
  <LineChart data={data} syncId="speedChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
  <CartesianGrid strokeDasharray="3 3" />
  <XAxis dataKey="TIME" />
- <YAxis label={{ value: 'Speed km/h', angle: -90, position: 'insideLeft' }} domain={[0, 60]} tickCount={6} />
+ <YAxis label={{ value: 'km/h', angle: -90, position: 'insideLeft' }} domain={[0, 60]} tickCount={6} />
  <Tooltip />
  <Line type="monotone" dataKey="SPEED" stroke="#82ca9d" fill="#82ca9d" isAnimationActive={false} animationDuration={0} />
  <Brush height={20} />
