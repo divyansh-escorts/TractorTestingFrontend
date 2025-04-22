@@ -1,19 +1,19 @@
 "use client"
-import { TractorDetails } from "@/components/ecommerce/TractorDetails";
-import React, { useEffect, useState } from "react";
-// import Flatpickr from "react-flatpickr";
-import 'flatpickr/dist/themes/material_blue.css';
-// import LiveMap from "@/components/map/LiveMap";
-// import PathMap from "@/components/map/pathMap";
-import dynamic from "next/dynamic";
-import { Box, Card, CardContent, Typography } from "@mui/material";
+ import { TractorDetails } from "@/components/ecommerce/TractorDetails";
+ import React, { useEffect, useState } from "react";
+ // import Flatpickr from "react-flatpickr";
+ import 'flatpickr/dist/themes/material_blue.css';
+ // import LiveMap from "@/components/map/LiveMap";
+ // import PathMap from "@/components/map/pathMap";
+ import dynamic from "next/dynamic";
+ import { Box, Card, CardContent, Typography } from "@mui/material";
 
 
-const LiveMap = dynamic(() => import('@/components/map/LiveMap'), { ssr: false });
-const PathMap = dynamic(() => import('@/components/map/pathMap'), { ssr: false });
-const Flatpickr = dynamic(() => import('react-flatpickr'), { ssr: false });
+ const LiveMap = dynamic(() => import('@/components/map/LiveMap'), { ssr: false });
+ const PathMap = dynamic(() => import('@/components/map/pathMap'), { ssr: false });
+ const Flatpickr = dynamic(() => import('react-flatpickr'), { ssr: false });
 
-interface Data {
+ interface Data {
  TIME: string;
  DEVICE_ID: string;
  LATITUDE:string;
@@ -21,8 +21,8 @@ interface Data {
  FUEL_LEVEL: string;
  SPEED: string;
  ENGINE_RPM: string;
-}
-interface ChartData {
+ }
+ interface ChartData {
  name: string;
  TIME: string;
  LATITUDE:string;
@@ -34,7 +34,7 @@ interface ChartData {
  ENGINE_RPM: number;
  }
 
-export default function Tracking() {
+ export default function Tracking() {
  const [newData, setNewData] = useState<Data>(Object);
  const[ date, setDate] = useState<string>('')
  const [today, setToday] = useState(new Date().toISOString().split('T')[0]);
@@ -44,6 +44,10 @@ export default function Tracking() {
  switch (status) {
  case 'Running':
  return { backgroundColor: '#4caf50', color: 'white' }; // Green for Running
+ case 'Ignition On':
+ return { backgroundColor: '#FFD300', color: 'white' };
+ case 'Cranked & Halted':
+ return { backgroundColor: '#FFA500', color: 'white' };
  case 'Stopped':
  return { backgroundColor: '#f44336', color: 'white' }; // Red for Stopped
  default:
@@ -124,8 +128,6 @@ export default function Tracking() {
  }
  ;
  allData.push(commingData)
-
- 
  console.log(allData)
  }
  
@@ -160,12 +162,24 @@ export default function Tracking() {
  const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
  console.log(currentTime); 
  if(currentTime-lastTime<=30){
+ if(lastPos.ENGINE_RPM<650){
+ setStatus("Ignition On")
+ }
+ else if(lastPos.ENGINE_RPM>=650){
+ setStatus("Cranked & Halted")
+ }
+ if(allData.length>1){
+ let lastPostion = allData[allData.length-1];
+ let secondLast = allData[allData.length-2];
+ 
+ if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && (timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME)) <= 30){
  setStatus("Running")
- console.log("running")
+ }
+ }
  }
  else{
  setStatus("Stopped")
- console.log("stopped")
+ console.log("stopped2")
  }
  }
  else{
@@ -173,6 +187,7 @@ export default function Tracking() {
  console.log("Stopped 1")
  }
  }
+
 
  React.useEffect(() => {
  console.log("i m in")
@@ -261,4 +276,4 @@ export default function Tracking() {
  </div>
  </div>
  );
-}
+ }

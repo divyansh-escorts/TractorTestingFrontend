@@ -256,7 +256,7 @@ useEffect(() => {
  if(next.TIME != "Error: Invalid time format" && current.TIME != "Error: Invalid time format"){
  const dif = timeToSeconds(next.TIME) - timeToSeconds(current.TIME)
  if(lat1 != lat2 || lon1 != lon2){
- if(dif<=1200 && dif >= -1200){
+ if(dif<=1200 && dif >0){
  HMR += dif
  }
  }
@@ -291,7 +291,7 @@ useEffect(() => {
  useEffect(() => {
  const fetchDetails = async () => {
  try {
- const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/414`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/EKL_02`);
  console.log(res.data.resp)
  setTableData(res.data.resp)
  }
@@ -444,7 +444,7 @@ useEffect(()=>{
  if(last?.TIME != "Error: Invalid time format" && secondLast?.TIME != "Error: Invalid time format"){
  const dif = timeToSeconds(last?.TIME) - timeToSeconds(secondLast?.TIME)
  if(lat1 != lat2 || lon1 != lon2){
- if(dif<=1200 && dif >= -1200){
+ if(dif<=1200 && dif >0){
  newHMR += dif
  }
  }

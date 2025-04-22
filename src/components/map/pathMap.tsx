@@ -215,7 +215,7 @@ async function getLocationFromCoordinates(
  if(next.TIME != "Error: Invalid time format" && current.TIME != "Error: Invalid time format"){
  const dif = timeToSeconds(next.TIME) - timeToSeconds(current.TIME)
  if(lat1 != lat2 || lon1 != lon2){
- if(dif<=1200){
+ if(dif<=1200 && dif>0){
  HMR += dif
  }
  }
@@ -366,9 +366,15 @@ async function getLocationFromCoordinates(
 
  {centerPosition?<Map center={centerPosition} zoom={15} style={{ height: "500px", width: "100%", marginTop:"20px" }}>
  <TileLayer
- attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
- url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
- />
+    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    zIndex={1}
+  />
+  
+  {/* Transparent labels overlay */}
+  <TileLayer
+    url="https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+    zIndex={2}
+  />
 
  {position?.length > 1 && (
  <PolylineComp positions={position} color="blue" weight={3} />

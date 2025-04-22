@@ -7,11 +7,13 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
-import { Button, Typography } from '@mui/material';
+import { Alert, Button, Typography } from '@mui/material';
 import ViewIcon from '@mui/icons-material/RemoveRedEye';
 import { useRouter } from 'next/navigation';
-import { Box } from '@mui/system';
+import { Box, Stack } from '@mui/system';
 import axios from 'axios';
+import AddTractor from '@/components/dashboard/addTractor';
+import AddIcon from '@mui/icons-material/Add';
 
 // Helper function to create data
 function createData(
@@ -20,7 +22,7 @@ function createData(
  tractor_number: string,
  registered: string,
  distance: string,
- distanceToday: number,
+ distanceToday: string,
  status: string,
  view: string
 ) {
@@ -39,6 +41,7 @@ interface ChartData {
  ENGINE_RPM: number;
  }
 
+
  interface TableData {
  date: string;
  hmr: string;
@@ -54,12 +57,17 @@ export default function Dashboard() {
  const [tableData, setTableData] = React.useState<TableData[]>([]);
  const [totalDistance, setTotalDistance] = React.useState<number>(0)
  const [allData, setAllData] = React.useState<ChartData[]>([]);
+ const [liveData, setLiveData] = React.useState<ChartData[]>([]);
+ const [todayDistance, setTodayDistance] = React.useState<number>(0)
+ const [addTractorAlert, setAddTractorAlert] = React.useState(false);
+ const [faidAddTractorAlert, setFaidAddTractorAlert] = React.useState(false);
+ const [modal, setModal] = React.useState(false);
 
  const rows = [
- createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',`${totalDistance}`, 0.01, `${status}`,"yes"),
- createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-','0', 0, 'Stopped','no'),
- createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-','0',0 ,'Stopped','no'),
- createData(4, 'FT 6065', 'N/A', '-','0',0 ,'Stopped','no'),
+ createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',`${totalDistance}`, `${todayDistance}`, `${status}`,"yes"),
+ createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-','0', '0', 'Stopped','no'),
+ createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-','0','0' ,'Stopped','no'),
+ createData(4, 'FT 6065', 'N/A', '-','0','0' ,'Stopped','no'),
  ];
  function addTimeToCurrentTime(currentTime:string) {
  const additionalTime = "5:30"
@@ -140,16 +148,131 @@ export default function Dashboard() {
  };
  }, []);
 
+
+ function calculateDecimal(number: number): string {
+ const [integerPart, decimalPart] = number.toString().split(".")
+ const result = (parseInt(decimalPart) / 60); 
+ const res = result.toString().replace('.', '');
+ const firstSixDigits = res.slice(0, 6);
+ const afterDecimal = parseInt(firstSixDigits)
+ return `${Math.floor(number)}.${afterDecimal}`;
+}
+
+const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+ const R = 6371; // Radius of Earth in km
+ const dLat = (lat2 - lat1) * (Math.PI / 180); // Convert degrees to radians
+ const dLon = (lon2 - lon1) * (Math.PI / 180); // Convert degrees to radians
+
+ const a =
+ Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+ Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+ Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+ const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+ return R * c; // Returns distance in km
+};
+
+React.useEffect(() => {
+ setLiveData([])
+ let HMR = 0
+ const fetchDetails = async () => {
+ try {
+ 
+ const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/live`);
+ console.log(res?.data)
+
+ if(res.status==200){
+ let lastTimestamp: string | null = null; 
+ console.log(lastTimestamp)
+
+ const newData = res.data
+ .filter((item: any) => {
+ const latitude = item.message.LATITUDE;
+ const longitude = item.message.LONGITUDE;
+ 
+ return (
+ latitude !== '0.0000' && latitude !== '0.000000' &&
+ longitude !== '0.0000' && longitude !== '0.000000' &&
+ latitude !== '0' && longitude !== '0' &&
+ latitude !== null && longitude !== null
+ );
+ })
+ .map((item: any) => {
+ const updatedEngineRpm = item.message.ENGINE_RPM < 649 ? 0 : item.message.ENGINE_RPM;
+ 
+ return {
+ "TIME": addTimeToCurrentTime(item.message.TIME),
+ "DEVICE_ID": item.message.DEVICE_ID,
+ "LATITUDE": calculateDecimal(item.message.LATITUDE),
+ "LONGITUDE": calculateDecimal(item.message.LONGITUDE),
+ "ALTITUDE": item.message.ALTITUDE,
+ "SPEED": item.message.SPEED,
+ "FUEL_LEVEL": item.message.FUEL_LEVEL,
+ "ENGINE_RPM": updatedEngineRpm 
+ };
+ })
+ .filter((value: any, index: any, self: any) => {
+ return index === self.findIndex((t: any) => t.TIME === value.TIME);
+ });
+ 
+
+ console.log(newData)
+ setLiveData(newData)
+ let totalDistance = 0
+ let allDataLenght = newData.length
+ // console.log(allDataLenght)
+ let lastPostion = newData[allDataLenght-1]
+ console.log(lastPostion)
+ // Loop through the coordinates and calculate distance between consecutive points
+ for (let i = 0; i < newData.length - 1; i++) {
+ const current = newData[i];
+ const next = newData[i + 1];
+ 
+ const lat1 = parseFloat(current.LATITUDE);
+ const lon1 = parseFloat(current.LONGITUDE);
+ const lat2 = parseFloat(next.LATITUDE);
+ const lon2 = parseFloat(next.LONGITUDE);
+ if(next.TIME != "Error: Invalid time format" && current.TIME != "Error: Invalid time format"){
+ // const dif = timeToSeconds(next.TIME) - timeToSeconds(current.TIME)
+ // if(lat1 != lat2 || lon1 != lon2){
+ // if(dif<=1200 && dif >= -1200){
+ // HMR += dif
+ // }
+ // }
+ // }
+ totalDistance += haversine(lat1, lon1, lat2, lon2);
+
+ 
+ }
+ // console.log(secondsToTime(HMR))
+ // setHMR(secondsToTime(HMR))
+ setTodayDistance( parseFloat(totalDistance.toFixed(2)))
+ }
+ }
+ else{
+ console.log("failed to load data")
+ }
+
+ } catch (err) {
+ console.log(err)
+ } 
+ };
+
+ fetchDetails(); 
+}, []);
+
+
  React.useEffect(() => {
  const fetchDetails = async () => {
  try {
- const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/414`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/EKL_02`);
  console.log(res.data.resp)
  const totalDistance = res.data.resp.reduce((sum:number, item:any) => {
  return sum + parseFloat(item.distance);
  }, 0);
  setTableData(res.data.resp)
- setTotalDistance(totalDistance)
+ setTotalDistance(totalDistance.toFixed(2))
  }
  catch(err){
  console.log(err)
@@ -158,6 +281,43 @@ export default function Dashboard() {
  
  fetchDetails(); 
  }, []);
+
+ React.useEffect(() => {
+ const fetchAllTractor = async () => {
+ try {
+ const res = await axios.get("https://fdcserver.escortskubota.com/tractor/all");
+ const tractors = res?.data?.data;
+
+ const tractorsWithDistance = await Promise.all(
+ tractors.map(async (tractor:any) => {
+ const id = tractor?.TractorId;
+ let totalDistance = 0;
+
+ const response = await axios.get(`https://fdcserver.escortskubota.com/tractor/trip/${id}`);
+ const trips = response?.data?.data || [];
+
+ trips.forEach((trip:any) => {
+ totalDistance += parseFloat(trip?.distance || 0);
+ });
+
+ return {
+ ...tractor,
+ totalDistance,
+ };
+ })
+ );
+ // setTractorData(tractorsWithDistance);
+ console.log(tractorsWithDistance);
+ console.log("Final Tractor Data with Distances:", tractorsWithDistance);
+ } catch (err) {
+ console.error("Error fetching data:", err);
+ }
+ };
+
+ fetchAllTractor();
+}, []);
+
+
 
 
  function checkStatus() {
@@ -170,6 +330,7 @@ export default function Dashboard() {
  const currentDate = new Date();
  const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
  console.log(currentTime); 
+ if(currentTime-lastTime<=30){
  if(lastPos.ENGINE_RPM<650){
  setStatus("Ignition On")
  }
@@ -180,10 +341,11 @@ export default function Dashboard() {
  let lastPostion = allData[allData.length-1];
  let secondLast = allData[allData.length-2];
  
- if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME) <= 30){
+ if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && (timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME)) <= 30){
  setStatus("Running")
  }
  }
+}
  else{
  setStatus("Stopped")
  console.log("stopped")
@@ -204,12 +366,14 @@ export default function Dashboard() {
  }, []);
 
 
+
+
  const getStatusStyle = (status: string) => {
  switch (status) {
  case 'Running':
  return { backgroundColor: '#4caf50', color: 'white' }; // Green for Running
  case 'Ignition On':
- return { backgroundColor: '#FFFF00', color: 'white' };
+ return { backgroundColor: '#FFD300', color: 'white' };
  case 'Cranked & Halted':
  return { backgroundColor: '#FFA500', color: 'white' };
  case 'Stopped':
@@ -218,8 +382,22 @@ export default function Dashboard() {
  return { backgroundColor: '#9e9e9e', color: 'white' }; // Grey for unknown status
  }
  };
+
+ const handleAddTractor= ()=>{
+ setModal(true);
+}
  return (
- <Box sx={{ p: 3 }}>
+<>
+<div style={{ display: 'flex', justifyContent: 'flex-end', marginRight:"24px" }}>
+ <Stack direction="row" spacing={2}>
+ <Button variant="contained" onClick={handleAddTractor} startIcon={<AddIcon />}>
+ Add Tractor
+ </Button>
+ {modal && <AddTractor setModal={setModal} setAddTractorAlert={setAddTractorAlert} setFaidAddTractorAlert={setFaidAddTractorAlert}/>}
+ </Stack>
+ </div>
+
+<Box sx={{ p: 3 }}>
  <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
  <Table sx={{ minWidth: 650 }} aria-label="tractor data table">
  <TableHead>
@@ -303,5 +481,8 @@ export default function Dashboard() {
  </Table>
  </TableContainer>
  </Box>
+ {addTractorAlert&&<Alert color='success'>Tractor Added Successfully</Alert>}
+ {faidAddTractorAlert&&<Alert color='error'>Failed to Add Tractor</Alert>}
+</>
  );
 }

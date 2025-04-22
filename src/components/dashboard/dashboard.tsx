@@ -1,27 +1,34 @@
-"use client"
-import { TractorDetails } from "@/components/ecommerce/TractorDetails";
-import React, { useEffect, useState } from "react";
-// import Flatpickr from "react-flatpickr";
-import 'flatpickr/dist/themes/material_blue.css';
-// import LiveMap from "@/components/map/LiveMap";
-// import PathMap from "@/components/map/pathMap";
-import dynamic from "next/dynamic";
-import { Box, Card, CardContent, Typography } from "@mui/material";
+"use client";
+import * as React from 'react';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import { Alert, Button, Typography } from '@mui/material';
+import ViewIcon from '@mui/icons-material/RemoveRedEye';
+import { useRouter } from 'next/navigation';
+import { Box, Stack } from '@mui/system';
+import axios from 'axios';
+import AddTractor from '@/components/dashboard/addTractor';
+import AddIcon from '@mui/icons-material/Add';
 
-
-const LiveMap = dynamic(() => import('@/components/map/LiveMap'), { ssr: false });
-const PathMap = dynamic(() => import('@/components/map/pathMap'), { ssr: false });
-const Flatpickr = dynamic(() => import('react-flatpickr'), { ssr: false });
-
-interface Data {
- TIME: string;
- DEVICE_ID: string;
- LATITUDE:string;
- LONGITUDE:string
- FUEL_LEVEL: string;
- SPEED: string;
- ENGINE_RPM: string;
+// Helper function to create data
+function createData(
+ id: number,
+ tractor_name: string,
+ tractor_number: string,
+ registered: string,
+ distance: string,
+ distanceToday: string,
+ status: string,
+ view: string
+) {
+ return { id, tractor_name, tractor_number,registered, distance, distanceToday, status , view};
 }
+
 interface ChartData {
  name: string;
  TIME: string;
@@ -34,43 +41,34 @@ interface ChartData {
  ENGINE_RPM: number;
  }
 
-export default function Tracking() {
- const [newData, setNewData] = useState<Data>(Object);
- const[ date, setDate] = useState<string>('')
- const [today, setToday] = useState(new Date().toISOString().split('T')[0]);
- const [status, setStatus] = useState<string>("Stopped");
 
- const getStatusStyle = (status: string) => {
- switch (status) {
- case 'Running':
- return { backgroundColor: '#4caf50', color: 'white' }; // Green for Running
- case 'Ignition On':
- return { backgroundColor: '#FFFF00', color: 'white' };
- case 'Cranked & Halted':
- return { backgroundColor: '#FFA500', color: 'white' };
- case 'Stopped':
- return { backgroundColor: '#f44336', color: 'white' }; // Red for Stopped
- default:
- return { backgroundColor: '#9e9e9e', color: 'white' }; // Grey for unknown status
+ interface TableData {
+ date: string;
+ hmr: string;
+ distance:string;
+ location:string;
  }
- };
 
- const handleDateChange = (date: any) => {
- const selectedDate = new Date(date[0]); // Get the selected date
- selectedDate.setDate(selectedDate.getDate() + 1); // Increase by 1 day
- 
- // Format the date as YYYY-MM-DD
- const newDate = selectedDate.toISOString().split('T')[0]; 
- 
- console.log(newDate);
- setDate(newDate); // Set the updated date
- };
- 
- useEffect(() => {
- // You can also check and update the date if necessary
- setToday(new Date().toISOString().split('T')[0]);
- console.log(new Date().toISOString().split('T')[0])
- }, []);
+// Sample data for the table
+
+export default function Dashboard() {
+ const router = useRouter();
+ const [status, setStatus] = React.useState<string>("Stopped");
+ const [tableData, setTableData] = React.useState<TableData[]>([]);
+ const [totalDistance, setTotalDistance] = React.useState<number>(0)
+ const [allData, setAllData] = React.useState<ChartData[]>([]);
+ const [liveData, setLiveData] = React.useState<ChartData[]>([]);
+ const [todayDistance, setTodayDistance] = React.useState<number>(0)
+ const [addTractorAlert, setAddTractorAlert] = React.useState(false);
+ const [faidAddTractorAlert, setFaidAddTractorAlert] = React.useState(false);
+ const [modal, setModal] = React.useState(false);
+
+ const rows = [
+ createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',`${totalDistance}`, `${todayDistance}`, `${status}`,"yes"),
+ createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-','0', '0', 'Stopped','no'),
+ createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-','0','0' ,'Stopped','no'),
+ createData(4, 'FT 6065', 'N/A', '-','0','0' ,'Stopped','no'),
+ ];
  function addTimeToCurrentTime(currentTime:string) {
  const additionalTime = "5:30"
  const time = currentTime.match(/(\d{2}:\d{2}:\d{2})/)?.[0];
@@ -94,8 +92,6 @@ export default function Tracking() {
  return hours * 3600 + minutes * 60 + seconds;
  };
  
- let allData : ChartData[] = []
-
  React.useEffect(() => {
  const socket = new WebSocket("wss://fdcserver.escortskubota.com/ws/"); // Change to your WebSocket server
  socket.onopen = () => {
@@ -153,6 +149,177 @@ export default function Tracking() {
  }, []);
 
 
+ function calculateDecimal(number: number): string {
+ const [integerPart, decimalPart] = number.toString().split(".")
+ const result = (parseInt(decimalPart) / 60); 
+ const res = result.toString().replace('.', '');
+ const firstSixDigits = res.slice(0, 6);
+ const afterDecimal = parseInt(firstSixDigits)
+ return `${Math.floor(number)}.${afterDecimal}`;
+}
+
+const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+ const R = 6371; // Radius of Earth in km
+ const dLat = (lat2 - lat1) * (Math.PI / 180); // Convert degrees to radians
+ const dLon = (lon2 - lon1) * (Math.PI / 180); // Convert degrees to radians
+
+ const a =
+ Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+ Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+ Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+ const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+ return R * c; // Returns distance in km
+};
+
+React.useEffect(() => {
+ setLiveData([])
+ let HMR = 0
+ const fetchDetails = async () => {
+ try {
+ 
+ const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/live`);
+ console.log(res?.data)
+
+ if(res.status==200){
+ let lastTimestamp: string | null = null; 
+ console.log(lastTimestamp)
+
+ const newData = res.data
+ .filter((item: any) => {
+ const latitude = item.message.LATITUDE;
+ const longitude = item.message.LONGITUDE;
+ 
+ return (
+ latitude !== '0.0000' && latitude !== '0.000000' &&
+ longitude !== '0.0000' && longitude !== '0.000000' &&
+ latitude !== '0' && longitude !== '0' &&
+ latitude !== null && longitude !== null
+ );
+ })
+ .map((item: any) => {
+ const updatedEngineRpm = item.message.ENGINE_RPM < 649 ? 0 : item.message.ENGINE_RPM;
+ 
+ return {
+ "TIME": addTimeToCurrentTime(item.message.TIME),
+ "DEVICE_ID": item.message.DEVICE_ID,
+ "LATITUDE": calculateDecimal(item.message.LATITUDE),
+ "LONGITUDE": calculateDecimal(item.message.LONGITUDE),
+ "ALTITUDE": item.message.ALTITUDE,
+ "SPEED": item.message.SPEED,
+ "FUEL_LEVEL": item.message.FUEL_LEVEL,
+ "ENGINE_RPM": updatedEngineRpm 
+ };
+ })
+ .filter((value: any, index: any, self: any) => {
+ return index === self.findIndex((t: any) => t.TIME === value.TIME);
+ });
+ 
+
+ console.log(newData)
+ setLiveData(newData)
+ let totalDistance = 0
+ let allDataLenght = newData.length
+ // console.log(allDataLenght)
+ let lastPostion = newData[allDataLenght-1]
+ console.log(lastPostion)
+ // Loop through the coordinates and calculate distance between consecutive points
+ for (let i = 0; i < newData.length - 1; i++) {
+ const current = newData[i];
+ const next = newData[i + 1];
+ 
+ const lat1 = parseFloat(current.LATITUDE);
+ const lon1 = parseFloat(current.LONGITUDE);
+ const lat2 = parseFloat(next.LATITUDE);
+ const lon2 = parseFloat(next.LONGITUDE);
+ if(next.TIME != "Error: Invalid time format" && current.TIME != "Error: Invalid time format"){
+ // const dif = timeToSeconds(next.TIME) - timeToSeconds(current.TIME)
+ // if(lat1 != lat2 || lon1 != lon2){
+ // if(dif<=1200 && dif >= -1200){
+ // HMR += dif
+ // }
+ // }
+ // }
+ totalDistance += haversine(lat1, lon1, lat2, lon2);
+
+ 
+ }
+ // console.log(secondsToTime(HMR))
+ // setHMR(secondsToTime(HMR))
+ setTodayDistance( parseFloat(totalDistance.toFixed(2)))
+ }
+ }
+ else{
+ console.log("failed to load data")
+ }
+
+ } catch (err) {
+ console.log(err)
+ } 
+ };
+
+ fetchDetails(); 
+}, []);
+
+
+ React.useEffect(() => {
+ const fetchDetails = async () => {
+ try {
+ const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/EKL_02`);
+ console.log(res.data.resp)
+ const totalDistance = res.data.resp.reduce((sum:number, item:any) => {
+ return sum + parseFloat(item.distance);
+ }, 0);
+ setTableData(res.data.resp)
+ setTotalDistance(totalDistance.toFixed(2))
+ }
+ catch(err){
+ console.log(err)
+ }
+ }
+ 
+ fetchDetails(); 
+ }, []);
+
+ React.useEffect(() => {
+ const fetchAllTractor = async () => {
+ try {
+ const res = await axios.get("https://fdcserver.escortskubota.com/tractor/all");
+ const tractors = res?.data?.data;
+
+ const tractorsWithDistance = await Promise.all(
+ tractors.map(async (tractor:any) => {
+ const id = tractor?.TractorId;
+ let totalDistance = 0;
+
+ const response = await axios.get(`https://fdcserver.escortskubota.com/tractor/trip/${id}`);
+ const trips = response?.data?.data || [];
+
+ trips.forEach((trip:any) => {
+ totalDistance += parseFloat(trip?.distance || 0);
+ });
+
+ return {
+ ...tractor,
+ totalDistance,
+ };
+ })
+ );
+ // setTractorData(tractorsWithDistance);
+ console.log(tractorsWithDistance);
+ console.log("Final Tractor Data with Distances:", tractorsWithDistance);
+ } catch (err) {
+ console.error("Error fetching data:", err);
+ }
+ };
+
+ fetchAllTractor();
+}, []);
+
+
+
+
  function checkStatus() {
  console.log(allData.length)
  if(allData.length>0){
@@ -163,6 +330,7 @@ export default function Tracking() {
  const currentDate = new Date();
  const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
  console.log(currentTime); 
+ if(currentTime-lastTime<=30){
  if(lastPos.ENGINE_RPM<650){
  setStatus("Ignition On")
  }
@@ -173,10 +341,11 @@ export default function Tracking() {
  let lastPostion = allData[allData.length-1];
  let secondLast = allData[allData.length-2];
  
- if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME) <= 30){
+ if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && (timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME)) <= 30){
  setStatus("Running")
  }
  }
+}
  else{
  setStatus("Stopped")
  console.log("stopped")
@@ -188,7 +357,6 @@ export default function Tracking() {
  }
  }
 
-
  React.useEffect(() => {
  console.log("i m in")
  const intervalId = setInterval(checkStatus, 30000);
@@ -196,84 +364,125 @@ export default function Tracking() {
  clearInterval(intervalId);
  };
  }, []);
- 
 
 
+
+
+ const getStatusStyle = (status: string) => {
+ switch (status) {
+ case 'Running':
+ return { backgroundColor: '#4caf50', color: 'white' }; // Green for Running
+ case 'Ignition On':
+ return { backgroundColor: '#FFD300', color: 'white' };
+ case 'Cranked & Halted':
+ return { backgroundColor: '#FFA500', color: 'white' };
+ case 'Stopped':
+ return { backgroundColor: '#f44336', color: 'white' }; // Red for Stopped
+ default:
+ return { backgroundColor: '#9e9e9e', color: 'white' }; // Grey for unknown status
+ }
+ };
+
+ const handleAddTractor= ()=>{
+ setModal(true);
+}
  return (
- <div className="grid grid-cols-12 gap-4 md:gap-6">
- 
- <div className="col-span-12 xl:col-span-6">
- <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-5">
- {/* Metric Item Start */}
- <Card sx={{ 
- borderRadius: 3, 
- boxShadow: 3, 
- transform: "scale(0.8)", 
- width: '100%' // Ensure the Card takes full width of its container
- }}>
- <CardContent>
- <Box sx={{ paddingTop: "6px" }} display="flex" justifyContent="space-between" alignItems="center">
- <Typography sx={{ color: "black", fontSize: "1rem" }} variant="body2" color="text.secondary">
- Tractor Number
- </Typography>
- <Typography variant="h6" fontWeight="bold" color="text.primary" sx={{ fontSize: "1.2rem" }}>
- HR 51 TC 2004/45/25
- </Typography>
- </Box>
- </CardContent>
- </Card>
+<>
+<div style={{ display: 'flex', justifyContent: 'flex-end', marginRight:"24px" }}>
+ <Stack direction="row" spacing={2}>
+ <Button variant="contained" onClick={handleAddTractor} startIcon={<AddIcon />}>
+ Add Tractor
+ </Button>
+ {modal && <AddTractor setModal={setModal} setAddTractorAlert={setAddTractorAlert} setFaidAddTractorAlert={setFaidAddTractorAlert}/>}
+ </Stack>
+ </div>
 
- {/* Status Box */}
- {
- (date === today || !date) ? (
- <Box
+<Box sx={{ p: 3 }}>
+ <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+ <Table sx={{ minWidth: 650 }} aria-label="tractor data table">
+ <TableHead>
+ <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+ <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ Tractor Name
+ </TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ Tractor Number
+ </TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ Testing Initiated On
+ </TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ Distance Travelled
+ </TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ Distance Travelled Today
+ </TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ Status
+ </TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>View</TableCell>
+ </TableRow>
+ </TableHead>
+
+ <TableBody>
+ {rows.map((row) => (
+ <TableRow
+ key={row.id}
  sx={{
- width: '85px', // Increased width for the status box
- padding: '4px 12px',
- margin: '20px',
- borderRadius: '12px',
- opacity: 0.9,
- ...getStatusStyle(status), // Assuming this is a function that dynamically adjusts styles
+ '&:last-child td, &:last-child th': { border: 0 },
+ backgroundColor: row.id % 2 === 0 ? '#fafafa' : 'white', // Alternate row colors
+ '&:hover': { backgroundColor: '#f1f1f1' }, // Hover effect
  }}
  >
- {status}
- </Box>
- ) : (
- <></> // This renders nothing when the condition is false
- )
- }
- </div>
- </div>
-
-
- {/* Date Picker & Select in One Row */}
- <div className="col-span-12 xl:col-span-6">
- <div style={{padding: "18px"}} className="grid grid-cols-1 gap-4 md:gap-6">
- <div>
- <Flatpickr
- options={{
- dateFormat: "Y-m-d", // Set the date format
+ <TableCell component="th" scope="row" sx={{ fontWeight: 500 }}>
+ {row.id}
+ </TableCell>
+ <TableCell align="right">{row.tractor_name}</TableCell>
+ <TableCell align="right">{row.tractor_number}</TableCell>
+ <TableCell align="right">{row.registered}</TableCell>
+ <TableCell align="right">{row.distance} km</TableCell>
+ <TableCell align="right">{row.distanceToday} km</TableCell>
+ <TableCell align="right">
+ <Box
+ sx={{
+ display: 'inline-block',
+ padding: '4px 12px',
+ borderRadius: '12px',
+ opacity: 0.9,
+ ...getStatusStyle(row.status), // Apply dynamic styles
  }}
- placeholder="Choose a date"
- className="w-full py-2 pl-3 pr-10 text-sm border border-gray-300 rounded-md h-11 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-white"
- onChange={handleDateChange} // Handle date change
- />
- </div>
- </div>
- </div>
-
- 
-
- <div className="col-span-12 mt-5">
- {(date === today || !date) ? <LiveMap /> : <PathMap date={date} />}
- </div>
- {/* Demographics & Orders */}
- {/* <div className="col-span-12 xl:col-span-6">
- <GraphData newData={newData}/>
- </div> */}
- <div className="col-span-12 xl:col-span-7">
- {/* <RecentOrders /> */}
- </div>
- </div>
+ >
+ {row.status}
+ </Box>
+ </TableCell>
+ <TableCell align="right">
+ {row.view==="yes"?<Button
+ onClick={() => {
+ router.push(`/tracking`); 
+ }}
+ variant="contained"
+ color="primary"
+ startIcon={<ViewIcon />}
+ sx={{
+ padding: '6px 16px',
+ borderRadius: '4px',
+ '&:hover': {
+ backgroundColor: '#1565c0',
+ },
+ }}
+ >
+ View
+ </Button>:<></>}
+ </TableCell>
+ </TableRow>
+ ))}
+ </TableBody>
+ </Table>
+ </TableContainer>
+ </Box>
+ {addTractorAlert&&<Alert color='success'>Tractor Added Successfully</Alert>}
+ {faidAddTractorAlert&&<Alert color='error'>Failed to Add Tractor</Alert>}
+</>
  );
 }
