@@ -21,12 +21,13 @@ function createData(
  tractor_name: string,
  tractor_number: string,
  registered: string,
+ HMR:string,
  distance: string,
  distanceToday: string,
  status: string,
  view: string
 ) {
- return { id, tractor_name, tractor_number,registered, distance, distanceToday, status , view};
+ return { id, tractor_name, tractor_number,registered,HMR, distance, distanceToday, status , view};
 }
 
 interface ChartData {
@@ -56,18 +57,20 @@ export default function Dashboard() {
  const [status, setStatus] = React.useState<string>("Stopped");
  const [tableData, setTableData] = React.useState<TableData[]>([]);
  const [totalDistance, setTotalDistance] = React.useState<number>(0)
+ const [totalHMR, setTotalHMR] = React.useState<string>('00:00:00')
  const [allData, setAllData] = React.useState<ChartData[]>([]);
  const [liveData, setLiveData] = React.useState<ChartData[]>([]);
  const [todayDistance, setTodayDistance] = React.useState<number>(0)
  const [addTractorAlert, setAddTractorAlert] = React.useState(false);
  const [faidAddTractorAlert, setFaidAddTractorAlert] = React.useState(false);
  const [modal, setModal] = React.useState(false);
+// const [tractorData, setTractorData] = React.useState<>([]);
 
  const rows = [
- createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',`${totalDistance}`, `${todayDistance}`, `${status}`,"yes"),
- createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-','0', '0', 'Stopped','no'),
- createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-','0','0' ,'Stopped','no'),
- createData(4, 'FT 6065', 'N/A', '-','0','0' ,'Stopped','no'),
+ createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',`${totalHMR}`,`${totalDistance}`, `${todayDistance}`, `${status}`,"yes"),
+ createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-','0','0', '0', 'Stopped','no'),
+ createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-','0','0','0' ,'Stopped','no'),
+ createData(4, 'FT 6065', 'N/A', '-','0','0','0' ,'Stopped','no'),
  ];
  function addTimeToCurrentTime(currentTime:string) {
  const additionalTime = "5:30"
@@ -91,6 +94,15 @@ export default function Dashboard() {
  const [hours, minutes, seconds] = time?.split(':')?.map(Number);
  return hours * 3600 + minutes * 60 + seconds;
  };
+
+ const secondsToTime = (seconds: number): string => {
+ const hours = Math.floor(seconds / 3600);
+ const minutes = Math.floor((seconds % 3600) / 60);
+ const secs = seconds % 60;
+
+ return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};
+
  
  React.useEffect(() => {
  const socket = new WebSocket("wss://fdcserver.escortskubota.com/ws/"); // Change to your WebSocket server
@@ -267,12 +279,30 @@ React.useEffect(() => {
  const fetchDetails = async () => {
  try {
  const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/EKL_02`);
+ console.log(res)
  console.log(res.data.resp)
- const totalDistance = res.data.resp.reduce((sum:number, item:any) => {
+ const totalDistance = res.data.resp.reduce((sum: number, item: any) => {
+ if (item.distance != null) {
+ console.log(item.distance);
+ console.log(sum);
  return sum + parseFloat(item.distance);
- }, 0);
+ }
+ return sum;
+}, 0);
+
+const totalHMR = res.data.resp.reduce((sum: number, item: any) => {
+ if (item.hmr != null) {
+ console.log(item.hmr);
+ console.log(sum);
+ return sum + timeToSeconds(item.hmr);
+ }
+ return sum;
+}, 0);
+
+ console.log(totalDistance)
  setTableData(res.data.resp)
  setTotalDistance(totalDistance.toFixed(2))
+ setTotalHMR(secondsToTime(totalHMR))
  }
  catch(err){
  console.log(err)
@@ -413,6 +443,9 @@ React.useEffect(() => {
  Testing Initiated On
  </TableCell>
  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+ HMR (HH:MM:SS)
+ </TableCell>
+ <TableCell align="right" sx={{ fontWeight: 'bold' }}>
  Distance Travelled
  </TableCell>
  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
@@ -441,6 +474,8 @@ React.useEffect(() => {
  <TableCell align="right">{row.tractor_name}</TableCell>
  <TableCell align="right">{row.tractor_number}</TableCell>
  <TableCell align="right">{row.registered}</TableCell>
+ <TableCell align="right">{row.HMR}</TableCell>
+
  <TableCell align="right">{row.distance} km</TableCell>
  <TableCell align="right">{row.distanceToday} km</TableCell>
  <TableCell align="right">
