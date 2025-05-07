@@ -58,7 +58,7 @@ interface addTractorProps {
  const TractorId= data.TractorId
  const TractorName = data.TractorName;
  const TractorNumber = data.TractorNumber
- const res = await axios.post(`https://fdcserver.escortskubota.com/tractor/initiate`, {
+ const res = await axios.post(`https://fdcserver.escortskubota.com/fdc/tractor/initiate`, {
  TractorId,TractorName,TractorNumber
  })
  console.log(res)

@@ -191,7 +191,7 @@ React.useEffect(() => {
  const fetchDetails = async () => {
  try {
  
- const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/live`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/live`);
  console.log(res?.data)
 
  if(res.status==200){
@@ -278,7 +278,7 @@ React.useEffect(() => {
  React.useEffect(() => {
  const fetchDetails = async () => {
  try {
- const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/EKL_02`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/getTractorHistory/EKL_02`);
  console.log(res)
  console.log(res.data.resp)
  const totalDistance = res.data.resp.reduce((sum: number, item: any) => {
@@ -315,7 +315,7 @@ const totalHMR = res.data.resp.reduce((sum: number, item: any) => {
  React.useEffect(() => {
  const fetchAllTractor = async () => {
  try {
- const res = await axios.get("https://fdcserver.escortskubota.com/tractor/all");
+ const res = await axios.get("https://fdcserver.escortskubota.com/fdc/tractor/all");
  const tractors = res?.data?.data;
 
  const tractorsWithDistance = await Promise.all(
@@ -323,7 +323,7 @@ const totalHMR = res.data.resp.reduce((sum: number, item: any) => {
  const id = tractor?.TractorId;
  let totalDistance = 0;
 
- const response = await axios.get(`https://fdcserver.escortskubota.com/tractor/trip/${id}`);
+ const response = await axios.get(`https://fdcserver.escortskubota.com/fdc/tractor/trip/${id}`);
  const trips = response?.data?.data || [];
 
  trips.forEach((trip:any) => {

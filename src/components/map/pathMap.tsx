@@ -147,7 +147,7 @@ async function getLocationFromCoordinates(
  const fetchDetails = async () => {
  try {
  
- const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/historic?date=${date}`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/historic?date=${date}`);
  console.log(res)
  if(res.status==200){
  function addTimeToCurrentTime(currentTime:string) {

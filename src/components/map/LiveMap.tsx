@@ -191,7 +191,7 @@ useEffect(() => {
  const fetchDetails = async () => {
  try {
  
- const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/live`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/live`);
  console.log(res?.data)
 
  if(res.status==200){
@@ -291,7 +291,7 @@ useEffect(() => {
  useEffect(() => {
  const fetchDetails = async () => {
  try {
- const res = await axios.get(`https://fdcserver.escortskubota.com/tripData/getTractorHistory/EKL_02`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/getTractorHistory/EKL_02`);
  console.log(res.data.resp)
  setTableData(res.data.resp)
  }
