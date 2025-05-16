@@ -168,7 +168,7 @@ async function getLocationFromCoordinates(
  return formattedTime;
  } 
  const newData = res.data.result[0]?.data
- .filter((item: any) => item.LATITUDE !== '0.000000' && item.LONGITUDE !== '0.000000'&& item.LATITUDE !== '0.0000' && item.LONGITUDE !== '0.0000') 
+ .filter((item: any) => item.LATITUDE !== '0.000000' && item.LONGITUDE !== '0.000000'&& item.LATITUDE !== '0.0000' && item.LONGITUDE !== '0.0000' && item.LATITUDE !== 0 && item.LONGITUDE !== 0 ) 
  .map((item: any) => {
  const updatedEngineRpm = item.ENGINE_RPM < 649 ? 0 : item.ENGINE_RPM;
  
@@ -366,15 +366,15 @@ async function getLocationFromCoordinates(
 
  {centerPosition?<Map center={centerPosition} zoom={15} style={{ height: "500px", width: "100%", marginTop:"20px" }}>
  <TileLayer
-    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
     zIndex={1}
   />
   
   {/* Transparent labels overlay */}
-  <TileLayer
+  {/* <TileLayer
     url="https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
     zIndex={2}
-  />
+  /> */}
 
  {position?.length > 1 && (
  <PolylineComp positions={position} color="blue" weight={3} />

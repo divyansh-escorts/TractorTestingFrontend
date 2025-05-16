@@ -207,7 +207,8 @@ useEffect(() => {
  latitude !== '0.0000' && latitude !== '0.000000' &&
  longitude !== '0.0000' && longitude !== '0.000000' &&
  latitude !== '0' && longitude !== '0' &&
- latitude !== null && longitude !== null
+ latitude !== null && longitude !== null &&
+ latitude !== 0 && longitude !== 0
  );
  })
  .map((item: any) => {
@@ -650,15 +651,15 @@ return (
 
 <Map center={positions[0]} zoom={20} style={{ height: "500px", width: "100%", marginTop:"20px" }}>
 <TileLayer
-    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
     zIndex={1}
   />
   
   {/* Transparent labels overlay */}
-  <TileLayer
+  {/* <TileLayer
     url="https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
     zIndex={2}
-  />
+  /> */}
 <UpdateMapView position={latestPosition} />
 
 {/* Render all markers */}
