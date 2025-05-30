@@ -11,10 +11,13 @@ import speedImage from "../../../public/images/icons8-speed-24.png"
 import L, { LatLngExpression, LatLngTuple } from 'leaflet';
 import "leaflet/dist/leaflet.css";
 import {
-LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Brush, AreaChart, Area, ResponsiveContainer
+LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Brush, AreaChart, Area, ResponsiveContainer,
+ComposedChart,
+Legend
 } from 'recharts';
 import axios from "axios";
 import { Box, Card, Divider, Table, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import dayjs from 'dayjs';
 
 interface WebSocketData {
 DEVICE_ID: string;
@@ -74,6 +77,41 @@ interface AssetTrackerMessage {
  message: AssetTrackerMessage;
  }
 
+ const demo = [
+ {
+ name: 'Page A',
+ uv: 590,
+ amt: 1400,
+ },
+ {
+ name: 'Page B',
+ uv: 868,
+ amt: 1506,
+ },
+ {
+ name: 'Page C',
+ uv: 1397,
+ amt: 989,
+ },
+ {
+ name: 'Page D',
+ uv: 1480,
+ amt: 1228,
+ },
+ {
+ name: 'Page E',
+ uv: 1520,
+ 
+ amt: 1100,
+ },
+ {
+ name: 'Page F',
+ uv: 1400,
+ 
+ amt: 1700,
+ },
+ ];
+
 
 
 const customIcon = L.icon({
@@ -127,6 +165,15 @@ const [tableData, setTableData] = useState<TableData[]>([]);
 const latRef = useRef(lat);
 const longRef = useRef(long);
 
+
+ const start = dayjs('2025-04-16');
+ const yesterday = dayjs().subtract(1, 'day');
+
+ // Generate array of all dates from start to yesterday inclusive
+ const allDates: string[] = [];
+ for (let d = start; d.isBefore(yesterday) || d.isSame(yesterday, 'day'); d = d.add(1, 'day')) {
+ allDates.push(d.format('YYYY-MM-DD'));
+ }
 
 
 // Update latRef and longRef on state change
@@ -207,8 +254,7 @@ useEffect(() => {
  latitude !== '0.0000' && latitude !== '0.000000' &&
  longitude !== '0.0000' && longitude !== '0.000000' &&
  latitude !== '0' && longitude !== '0' &&
- latitude !== null && longitude !== null &&
- latitude !== 0 && longitude !== 0
+ latitude !== null && longitude !== null
  );
  })
  .map((item: any) => {
@@ -257,7 +303,7 @@ useEffect(() => {
  if(next.TIME != "Error: Invalid time format" && current.TIME != "Error: Invalid time format"){
  const dif = timeToSeconds(next.TIME) - timeToSeconds(current.TIME)
  if(lat1 != lat2 || lon1 != lon2){
- if(dif<=1200 && dif >0){
+ if(dif<=1200 && dif > 0 ){
  HMR += dif
  }
  }
@@ -395,40 +441,6 @@ socket.close();
 
 
 
-function checkStatus() {
- console.log(allData.length)
- if(allData.length>0){
- let allDataLength = allData.length;
- console.log(allDataLength)
- let lastPos = allData[allDataLength-1];
- let lastTime = timeToSeconds(lastPos?.TIME);
- const currentDate = new Date();
- const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
- console.log(currentTime); 
- if(currentTime-lastTime<=30){
- setStatus("Running")
- console.log("running")
- }
- else{
- setStatus("Stopped")
- console.log("stopped")
- }
- }
- else{
- setStatus("Stopped")
- console.log("Stopped 1")
- }
-}
-
- useEffect(() => {
- console.log("i m in")
- const intervalId = setInterval(checkStatus, 30000);
- return () => {
- clearInterval(intervalId);
- };
- }, []);
-
-
 useEffect(()=>{
  try{
  if(Data){
@@ -445,7 +457,7 @@ useEffect(()=>{
  if(last?.TIME != "Error: Invalid time format" && secondLast?.TIME != "Error: Invalid time format"){
  const dif = timeToSeconds(last?.TIME) - timeToSeconds(secondLast?.TIME)
  if(lat1 != lat2 || lon1 != lon2){
- if(dif<=1200 && dif >0){
+ if(dif<=1200 && dif > 0 ){
  newHMR += dif
  }
  }
@@ -555,7 +567,7 @@ return (
  gap: '4.2px' // 5% increase of 4px
  }}>
  <img src={dis.src} alt="Image" style={{ height: "25.2px" }} /> {/* 5% increase of 24px */}
- <p style={{ color: '#4186E5', fontSize: '18px' }}>{totalDistance.toFixed(2)} km</p> {/* 5% increase of 16px */}
+ <p style={{ color: '#4186E5', fontSize: '18px' }}>{totalDistance.toFixed(2)} KM</p> {/* 5% increase of 16px */}
  </div>
  </div>
  </div>
@@ -651,15 +663,9 @@ return (
 
 <Map center={positions[0]} zoom={20} style={{ height: "500px", width: "100%", marginTop:"20px" }}>
 <TileLayer
-    url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-    zIndex={1}
-  />
-  
-  {/* Transparent labels overlay */}
-  {/* <TileLayer
-    url="https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-    zIndex={2}
-  /> */}
+ attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+ url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+ />
 <UpdateMapView position={latestPosition} />
 
 {/* Render all markers */}
@@ -713,7 +719,7 @@ flexDirection: 'column'
 <LineChart data={Data} syncId="speedChart" margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
 <CartesianGrid strokeDasharray="3 3" />
 <XAxis dataKey="TIME" />
-<YAxis label={{ value: 'km/h', angle: -90, position: 'insideLeft' }} domain={[0, 60]} tickCount={6} />
+<YAxis label={{ value: 'Speed km/h', angle: -90, position: 'insideLeft' }} domain={[0, 60]} tickCount={6} />
 <Tooltip />
 <Brush height={20} startIndex={brushIndices.startIndex} onChange={handleBrushChange} />
 <Line type="monotone" dataKey="SPEED" stroke="#82ca9d" fill="#82ca9d" isAnimationActive={false} animationDuration={0} />
@@ -731,6 +737,8 @@ flexDirection: 'column'
 <Brush height={20} startIndex={brushIndices.startIndex} onChange={handleBrushChange} />
 </AreaChart>
 </ResponsiveContainer>
+
+
 </div>
 </div>
 </div>
@@ -753,18 +761,27 @@ flexDirection: 'column'
  </TableRow>
  </TableHead>
  <TableBody>
- {tableData
- // Sort by date in descending order (newest first)
- // .sort((a, b) => new Date(b.date) - new Date(a.date))
- .map((e) => {
+ {allDates.map((date) => {
+ const entry = tableData.find((e) => e.date === date);
+ if (entry) {
  return (
- <TableRow key={e.date}>
- <TableCell>{e.date}</TableCell>
- <TableCell>{e.hmr}</TableCell>
- <TableCell>{e.distance} km</TableCell>
- <TableCell>{e.location}</TableCell>
+ <TableRow key={date}>
+ <TableCell>{entry.date}</TableCell>
+ <TableCell>{entry.hmr}</TableCell>
+ <TableCell>{entry.distance} km</TableCell>
+ <TableCell>{entry.location}</TableCell>
  </TableRow>
  );
+ } else {
+ return (
+ <TableRow key={date}>
+ <TableCell>{date}</TableCell>
+ <TableCell colSpan={3} align="center" sx={{ fontStyle: 'italic', color: 'gray' }}>
+ No data
+ </TableCell>
+ </TableRow>
+ );
+ }
  })}
  </TableBody>
  </Table>
