@@ -166,7 +166,7 @@ const latRef = useRef(lat);
 const longRef = useRef(long);
 
 
- const start = dayjs('2025-04-16');
+ const start = dayjs('2025-04-04');
  const yesterday = dayjs().subtract(1, 'day');
 
  // Generate array of all dates from start to yesterday inclusive
