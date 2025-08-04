@@ -358,7 +358,7 @@ const totalHMR = res.data.resp.reduce((sum: number, item: any) => {
  const res = await axios.get("https://fdcserver.escortskubota.com/fdc/tractor/all");
  const tractors = res?.data?.data;
 console.log("320",tractors);
- const tractorsWithDistance = await Promise.all(
+ const tractorsWithDistance = await Promise?.all(
  tractors?.map(async (tractor:any) => {
  const id = tractor?.TractorId;
  let totalDistance = 0;

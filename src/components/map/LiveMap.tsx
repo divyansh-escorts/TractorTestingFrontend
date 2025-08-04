@@ -119,7 +119,7 @@ interface AssetTrackerMessage {
 
 
 const customIcon = L.icon({
-iconUrl: 'images/loaction.png', // put your image path here
+iconUrl: '/images/loaction.png', // put your image path here
 iconSize: [16, 16], // size of the icon
 iconAnchor: [8, 18], // point of the icon which will correspond to marker's location
 popupAnchor: [0, -16] // point from which the popup should open relative to the iconAnchor
@@ -679,7 +679,7 @@ return (
 
  const icon = isLast 
  ? L.icon({
- iconUrl: 'images/tractor.svg', // icon for the last point
+ iconUrl: '/images/tractor.svg', // icon for the last point
  iconSize: [32, 32],
  iconAnchor: [16, 16],
  popupAnchor: [0, -16],
