@@ -170,7 +170,7 @@ const latRef = useRef(lat);
 const longRef = useRef(long);
 
 
- const start = dayjs('2025-04-04');
+ const start = tractor_id==='EKL_02'?dayjs('2025-04-04'):dayjs('2025-08-04');
  const yesterday = dayjs().subtract(1, 'day');
 
  // Generate array of all dates from start to yesterday inclusive
@@ -677,7 +677,7 @@ return (
 {positions.map((pos, index) => {
  const isLast = index === positions.length - 1;
 
- const icon = isLast
+ const icon = isLast 
  ? L.icon({
  iconUrl: 'images/tractor.svg', // icon for the last point
  iconSize: [32, 32],
