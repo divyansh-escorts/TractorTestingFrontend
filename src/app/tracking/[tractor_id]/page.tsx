@@ -5,8 +5,9 @@ import Tracking from '@/components/tracking/tracking';
 
 
 
-export default function Page(): React.JSX.Element {
+export default async function Page({params}:{params:Promise<{tractor_id:string}>}): Promise<React.JSX.Element> {
+  const {tractor_id} = await params; 
   return (
-   <Tracking/>
+   <Tracking tractor_id={tractor_id}/>
   );
 }

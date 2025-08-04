@@ -70,6 +70,10 @@ interface AssetTrackerMessage {
  FUEL_LEVEL: string;
  ENGINE_RPM: string;
  }
+
+ interface live_tractor_prop{
+    tractor_id:string;
+ }
  
  interface AssetTrackerData {
  timestamp: string;
@@ -146,7 +150,7 @@ return null;
  }
 };
 
-const LiveMap = () => {
+const LiveMap:React.FC<live_tractor_prop> = ({tractor_id}) => {
 const [positions, setPositions] = useState<LatLngTuple[]>([]); // Default: Nashik
 const [center, setCenter] = useState<LatLngExpression>(); 
 const [Data, setData] = useState<ChartData[]>([]);
@@ -237,8 +241,8 @@ useEffect(() => {
  let HMR = 0
  const fetchDetails = async () => {
  try {
- 
- const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/live`);
+
+ const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/live/${tractor_id}`);
  console.log(res?.data)
 
  if(res.status==200){
@@ -338,7 +342,7 @@ useEffect(() => {
  useEffect(() => {
  const fetchDetails = async () => {
  try {
- const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/getTractorHistory/EKL_02`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/getTractorHistory/${tractor_id}`);
  console.log(res.data.resp)
  setTableData(res.data.resp)
  }
@@ -363,7 +367,8 @@ try {
  console.log("Event data",event?.data)
  const data = JSON.parse(event?.data);
  if(Data.length == 0 || Data[Data.length-1].TIME != data.TIME)
- if (data && 
+ if (data &&
+ data.DEVICE_ID===tractor_id&& 
  data.DEVICE_ID && 
  data.LATITUDE!=="0.0000"&&
  data.LONGITUDE!=="0.0000" &&

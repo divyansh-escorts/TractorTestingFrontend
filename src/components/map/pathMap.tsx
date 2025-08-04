@@ -47,7 +47,8 @@ interface GraphDataProps {
 }
 
 interface dateProps{
- date:string
+ date:string,
+ tractor_id:string
 }
 
 const customIcon = L.icon({
@@ -65,7 +66,7 @@ const MarkerComp = dynamic(() => import("react-leaflet").then((mod) => mod.Marke
 const PopupComp = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false });
 const PolylineComp = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false });
 
-const PathMap: React.FC<dateProps> = ({ date }) => {
+const PathMap: React.FC<dateProps> = ({ date,tractor_id }) => {
  const [data, setData] = useState<ChartData[]>([]);
  const [centerPosition, setCenterPosition] = useState<LatLngTuple>();
  const [position, setPosition] = useState<LatLngTuple[]>([]);
@@ -147,7 +148,7 @@ async function getLocationFromCoordinates(
  const fetchDetails = async () => {
  try {
  
- const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/historic?date=${date}`);
+ const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/historic?date=${date}&tractor_id=${tractor_id}`);
  console.log(res)
  if(res.status==200){
  function addTimeToCurrentTime(currentTime:string) {

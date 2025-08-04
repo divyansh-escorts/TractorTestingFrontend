@@ -13,6 +13,10 @@
  const PathMap = dynamic(() => import('@/components/map/pathMap'), { ssr: false });
  const Flatpickr = dynamic(() => import('react-flatpickr'), { ssr: false });
 
+interface tractor_props{
+    tractor_id:string
+}
+
  interface Data {
  TIME: string;
  DEVICE_ID: string;
@@ -34,7 +38,7 @@
  ENGINE_RPM: number;
  }
 
- export default function Tracking() {
+ const Tracking:React.FC<tractor_props>=({tractor_id})=> {
  const [newData, setNewData] = useState<Data>(Object);
  const[ date, setDate] = useState<string>('')
  const [today, setToday] = useState(new Date().toISOString().split('T')[0]);
@@ -107,6 +111,7 @@
  console.log("Event data",event?.data)
  const data = JSON.parse(event?.data);
  if (data && 
+data.DEVICE_ID===tractor_id&&
  data.DEVICE_ID && 
  data.LATITUDE !== "0.000000" &&
  data.LONGITUDE !== "0.000000" &&
@@ -265,7 +270,7 @@
  
 
  <div className="col-span-12 mt-5">
- {(date === today || !date) ? <LiveMap /> : <PathMap date={date} />}
+ {(date === today || !date) ? <LiveMap tractor_id={tractor_id} /> : <PathMap tractor_id={tractor_id} date={date} />}
  </div>
  {/* Demographics & Orders */}
  {/* <div className="col-span-12 xl:col-span-6">
@@ -277,3 +282,4 @@
  </div>
  );
  }
+ export default Tracking;

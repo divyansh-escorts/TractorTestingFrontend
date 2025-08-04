@@ -67,7 +67,7 @@ export default function Dashboard() {
 // const [tractorData, setTractorData] = React.useState<>([]);
 
  const rows = [
- createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',`${totalHMR}`,`${totalDistance}`, `${todayDistance}`, `${status}`,"yes"),
+ createData(1,'FT 45', 'HR 51 TC 2004/45/25','03/04/25',`${totalHMR}`,`${totalDistance}`, `${todayDistance}`, `${status}`,"yes"),
  createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-','0','0', '0', 'Stopped','no'),
  createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-','0','0','0' ,'Stopped','no'),
  createData(4, 'FT 6065', 'N/A', '-','0','0','0' ,'Stopped','no'),
@@ -317,7 +317,7 @@ const totalHMR = res.data.resp.reduce((sum: number, item: any) => {
  try {
  const res = await axios.get("https://fdcserver.escortskubota.com/fdc/tractor/all");
  const tractors = res?.data?.data;
-
+console.log("320",tractors)
  const tractorsWithDistance = await Promise.all(
  tractors.map(async (tractor:any) => {
  const id = tractor?.TractorId;

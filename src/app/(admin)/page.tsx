@@ -19,6 +19,7 @@ import AddIcon from '@mui/icons-material/Add';
 function createData(
  id: number,
  tractor_name: string,
+ device_id:string,
  tractor_number: string,
  registered: string,
  HMR:string,
@@ -27,7 +28,7 @@ function createData(
  status: string,
  view: string
 ) {
- return { id, tractor_name, tractor_number,registered,HMR, distance, distanceToday, status , view};
+ return { id, tractor_name, device_id,tractor_number,registered,HMR, distance, distanceToday, status , view};
 }
 
 interface ChartData {
@@ -55,22 +56,27 @@ interface ChartData {
 export default function Dashboard() {
  const router = useRouter();
  const [status, setStatus] = React.useState<string>("Stopped");
+ const [status1, setStatus1] = React.useState<string>("Stopped");
  const [tableData, setTableData] = React.useState<TableData[]>([]);
  const [totalDistance, setTotalDistance] = React.useState<number>(0)
  const [totalHMR, setTotalHMR] = React.useState<string>('00:00:00')
+ const [totalDistance1, setTotalDistance1] = React.useState<number>(0)
+ const [totalHMR1, setTotalHMR1] = React.useState<string>('00:00:00')
  const [allData, setAllData] = React.useState<ChartData[]>([]);
  const [liveData, setLiveData] = React.useState<ChartData[]>([]);
  const [todayDistance, setTodayDistance] = React.useState<number>(0)
+ const [todayDistance1, setTodayDistance1] = React.useState<number>(0)
  const [addTractorAlert, setAddTractorAlert] = React.useState(false);
  const [faidAddTractorAlert, setFaidAddTractorAlert] = React.useState(false);
  const [modal, setModal] = React.useState(false);
 // const [tractorData, setTractorData] = React.useState<>([]);
 
  const rows = [
- createData(1, 'FT 45', 'HR 51 TC 2004/45/25','03/04/25',`${totalHMR}`,`${totalDistance}`, `${todayDistance}`, `${status}`,"yes"),
- createData(2, 'FT 6065', 'HR 53 TC 2004/45/311','-','0','0', '0', 'Stopped','no'),
- createData(3, 'FT 6065', 'HR 51 TC 2004/45/330', '-','0','0','0' ,'Stopped','no'),
- createData(4, 'FT 6065', 'N/A', '-','0','0','0' ,'Stopped','no'),
+ createData(1, 'FT 45','EKL_02', 'HR 51 TC 2004/45/25','03/04/25',`${totalHMR}`,`${totalDistance}`, `${todayDistance}`, `${status}`,"yes"),
+ createData(2, 'FT 45','EKL_03', 'Not Known','04/08/25',`${totalHMR1}`,`${totalDistance1}`, `${todayDistance1}`, `${status1}`,"yes"),
+ createData(3, 'FT 6065','EKL_999', 'HR 53 TC 2004/45/311','-','0','0', '0', 'Stopped','no'),
+ createData(4, 'FT 6065','EKL_999', 'HR 51 TC 2004/45/330', '-','0','0','0' ,'Stopped','no'),
+ createData(5, 'FT 6065','EKL_999', 'N/A', '-','0','0','0' ,'Stopped','no'),
  ];
  function addTimeToCurrentTime(currentTime:string) {
  const additionalTime = "5:30"
@@ -308,7 +314,41 @@ const totalHMR = res.data.resp.reduce((sum: number, item: any) => {
  console.log(err)
  }
  }
- 
+
+ const fetchDetails1 = async () => {
+    try {
+    const res = await axios.get(`https://fdcserver.escortskubota.com/fdc/tripData/getTractorHistory/EKL_03`);
+    console.log(res)
+    console.log(res.data.resp)
+    const totalDistance = res.data.resp.reduce((sum: number, item: any) => {
+    if (item.distance != null) {
+    console.log(item.distance);
+    console.log(sum);
+    return sum + parseFloat(item.distance);
+    }
+    return sum;
+   }, 0);
+   
+   const totalHMR = res.data.resp.reduce((sum: number, item: any) => {
+    if (item.hmr != null) {
+    console.log(item.hmr);
+    console.log(sum);
+    return sum + timeToSeconds(item.hmr);
+    }
+    return sum;
+   }, 0);
+   
+    console.log(totalDistance)
+    setTableData(res.data.resp)
+    setTotalDistance1(totalDistance.toFixed(2))
+    setTotalHMR1(secondsToTime(totalHMR))
+    }
+    catch(err){
+    console.log(err)
+    }
+    }
+
+ fetchDetails1();
  fetchDetails(); 
  }, []);
 
@@ -317,9 +357,9 @@ const totalHMR = res.data.resp.reduce((sum: number, item: any) => {
  try {
  const res = await axios.get("https://fdcserver.escortskubota.com/fdc/tractor/all");
  const tractors = res?.data?.data;
-
+console.log("320",tractors);
  const tractorsWithDistance = await Promise.all(
- tractors.map(async (tractor:any) => {
+ tractors?.map(async (tractor:any) => {
  const id = tractor?.TractorId;
  let totalDistance = 0;
 
@@ -494,7 +534,7 @@ const totalHMR = res.data.resp.reduce((sum: number, item: any) => {
  <TableCell align="right">
  {row.view==="yes"?<Button
  onClick={() => {
- router.push(`/tracking`); 
+ router.push(`/tracking/${row.device_id}`); 
  }}
  variant="contained"
  color="primary"
