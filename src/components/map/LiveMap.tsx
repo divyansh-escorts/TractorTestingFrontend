@@ -365,10 +365,12 @@ console.log("Connected to WebSocket");
 socket.onmessage = (event) => {
 try {
  console.log("Event data",event?.data)
+ console.log(tractor_id,typeof tractor_id);
  const data = JSON.parse(event?.data);
+ console.log(data?.DEVICE_ID,typeof data?.DEVICE_ID);
  if(Data.length == 0 || Data[Data.length-1].TIME != data.TIME)
  if (data &&
- data.DEVICE_ID===tractor_id&& 
+   data.DEVICE_ID==`${tractor_id} `&& 
  data.DEVICE_ID && 
  data.LATITUDE!=="0.0000"&&
  data.LONGITUDE!=="0.0000" &&
@@ -377,7 +379,7 @@ try {
  !isNaN(parseFloat(data.ENGINE_RPM)) &&
  !isNaN(parseFloat(data.FUEL_LEVEL)) &&
  !isNaN(parseFloat(data.SPEED))) {
- 
+ console.log("i am innnnn")
  setData((prevData) => {
  const updatedData = [
  ...prevData,
@@ -534,7 +536,7 @@ return (
 <div>
 
  
-<div style={{ display: 'flex', width: '100%' }}>
+<div style={{ display: 'flex', flexWrap:'wrap', width: '100%' }}>
 
 
 {/* Left side: Stats Section */}

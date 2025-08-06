@@ -114,7 +114,8 @@ export default function Dashboard() {
  try {
  console.log("Event data",event?.data)
  const data = JSON.parse(event?.data);
- if (data && 
+ if (data &&
+
  data.DEVICE_ID && 
  data.LATITUDE !== "0.000000" &&
  data.LONGITUDE !== "0.000000" &&

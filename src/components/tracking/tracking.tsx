@@ -25,6 +25,7 @@ interface tractor_props{
  FUEL_LEVEL: string;
  SPEED: string;
  ENGINE_RPM: string;
+ IGNITION:string;
  }
  interface ChartData {
  name: string;
@@ -36,6 +37,7 @@ interface tractor_props{
  FUEL_LEVEL: number;
  SPEED: number;
  ENGINE_RPM: number;
+ IGNITION:number;
  }
 
  const Tracking:React.FC<tractor_props>=({tractor_id})=> {
@@ -111,7 +113,7 @@ interface tractor_props{
  console.log("Event data",event?.data)
  const data = JSON.parse(event?.data);
  if (data && 
-data.DEVICE_ID===tractor_id&&
+data.DEVICE_ID==`${tractor_id} `&&
  data.DEVICE_ID && 
  data.LATITUDE !== "0.000000" &&
  data.LONGITUDE !== "0.000000" &&
@@ -130,6 +132,7 @@ data.DEVICE_ID===tractor_id&&
  FUEL_LEVEL: parseFloat(data.FUEL_LEVEL),
  SPEED: parseFloat(data.SPEED),
  ENGINE_RPM: parseFloat(data.ENGINE_RPM),
+ IGNITION:parseFloat(data.IGNITION)
  }
  ;
  allData.push(commingData)
@@ -156,47 +159,68 @@ data.DEVICE_ID===tractor_id&&
  }, []);
 
 
- function checkStatus() {
- console.log(allData.length)
- if(allData.length>0){
- let allDataLength = allData.length;
- console.log(allDataLength)
- let lastPos = allData[allDataLength-1];
- let lastTime = timeToSeconds(lastPos?.TIME);
- const currentDate = new Date();
- const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
- console.log(currentTime); 
- if(currentTime-lastTime<=30){
- if(lastPos.ENGINE_RPM<650){
- setStatus("Ignition On")
- }
- else if(lastPos.ENGINE_RPM>=650){
- setStatus("Cranked & Halted")
- }
- if(allData.length>1){
- let lastPostion = allData[allData.length-1];
- let secondLast = allData[allData.length-2];
+//  function checkStatus() {
+//  console.log(allData.length)
+//  if(allData.length>0){
+//  let allDataLength = allData.length;
+//  console.log(allDataLength)
+//  let lastPos = allData[allDataLength-1];
+//  let lastTime = timeToSeconds(lastPos?.TIME);
+//  const currentDate = new Date();
+//  const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
+//  console.log(currentTime); 
+//  if(currentTime-lastTime<=30){
+//     if(lastPos.ENGINE_RPM<650){
+//     setStatus("Ignition On")
+//     }
+//     else if(lastPos.ENGINE_RPM>=650){
+//     setStatus("Cranked & Halted")
+//     }
+//  if(allData.length>1){
+//  let lastPostion = allData[allData.length-1];
+//  let secondLast = allData[allData.length-2];
  
- if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && (timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME)) <= 30){
- setStatus("Running")
- }
- }
- }
- else{
- setStatus("Stopped")
- console.log("stopped2")
- }
- }
- else{
- setStatus("Stopped")
- console.log("Stopped 1")
- }
- }
+//  if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && (timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME)) <= 30){
+//  setStatus("Running")
+//  }
+//  }
+//  }
+//  else{
+//  setStatus("Stopped")
+//  console.log("stopped2")
+//  }
+//  }
+//  else{
+//  setStatus("Stopped")
+//  console.log("Stopped 1")
+//  }
+//  }
 
+ function checkStatus() {
+    console.log(allData.length)
+    if(allData.length>0){
+    let allDataLength = allData.length;
+    console.log(allDataLength)
+    let lastPos = allData[allDataLength-1];
+    let lastTime = timeToSeconds(lastPos?.TIME);
+    const currentDate = new Date();
+    const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
+    console.log(currentTime);
+    console.log(lastPos) 
+    if(lastPos.SPEED>0)
+        setStatus("Running")
+    else if(lastPos.ENGINE_RPM>650 && lastPos.IGNITION===1.000000)
+        setStatus("Cranked & Halted")
+    else if(lastPos.ENGINE_RPM<=650 && lastPos.IGNITION===1.000000)
+        setStatus("Ignition On")
+    else
+    setStatus("Stopped");
+    }
+ }
 
  React.useEffect(() => {
  console.log("i m in")
- const intervalId = setInterval(checkStatus, 30000);
+ const intervalId = setInterval(checkStatus, 12000);
  return () => {
  clearInterval(intervalId);
  };

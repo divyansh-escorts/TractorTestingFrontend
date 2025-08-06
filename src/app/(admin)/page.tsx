@@ -41,6 +41,7 @@ interface ChartData {
  FUEL_LEVEL: number;
  SPEED: number;
  ENGINE_RPM: number;
+ IGNITION:number;
  }
 
 
@@ -139,6 +140,7 @@ export default function Dashboard() {
  FUEL_LEVEL: parseFloat(data.FUEL_LEVEL),
  SPEED: parseFloat(data.SPEED),
  ENGINE_RPM: parseFloat(data.ENGINE_RPM),
+ IGNITION:parseFloat(data.IGNITION)
  }
  ;
  allData.push(commingData)
@@ -390,42 +392,63 @@ console.log("320",tractors);
 
 
 
- function checkStatus() {
- console.log(allData.length)
- if(allData.length>0){
- let allDataLength = allData.length;
- console.log(allDataLength)
- let lastPos = allData[allDataLength-1];
- let lastTime = timeToSeconds(lastPos?.TIME);
- const currentDate = new Date();
- const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
- console.log(currentTime); 
- if(currentTime-lastTime<=30){
- if(lastPos.ENGINE_RPM<650){
- setStatus("Ignition On")
- }
- else if(lastPos.ENGINE_RPM>=650){
- setStatus("Cranked & Halted")
- }
- if(allData.length>1){
- let lastPostion = allData[allData.length-1];
- let secondLast = allData[allData.length-2];
+//  function checkStatus() {
+//  console.log(allData.length)
+//  if(allData.length>0){
+//  let allDataLength = allData.length;
+//  console.log(allDataLength)
+//  let lastPos = allData[allDataLength-1];
+//  let lastTime = timeToSeconds(lastPos?.TIME);
+//  const currentDate = new Date();
+//  const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
+//  console.log(currentTime); 
+//  if(currentTime-lastTime<=30){
+//  if(lastPos.ENGINE_RPM<650){
+//  setStatus("Ignition On")
+//  }
+//  else if(lastPos.ENGINE_RPM>=650){
+//  setStatus("Cranked & Halted")
+//  }
+//  if(allData.length>1){
+//  let lastPostion = allData[allData.length-1];
+//  let secondLast = allData[allData.length-2];
  
- if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && (timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME)) <= 30){
- setStatus("Running")
- }
- }
+//  if((lastPostion.LATITUDE!= secondLast.LATITUDE || lastPostion.LONGITUDE!= secondLast.LONGITUDE) && currentTime-lastTime<=30 && (timeToSeconds(lastPostion.TIME)- timeToSeconds(secondLast.TIME)) <= 30){
+//  setStatus("Running")
+//  }
+//  }
+// }
+//  else{
+//  setStatus("Stopped")
+//  console.log("stopped")
+//  }
+//  }
+//  else{
+//  setStatus("Stopped")
+//  console.log("Stopped 1")
+//  }
+//  }
+ function checkStatus() {
+   console.log(allData.length)
+   if(allData.length>0){
+   let allDataLength = allData.length;
+   console.log(allDataLength)
+   let lastPos = allData[allDataLength-1];
+   let lastTime = timeToSeconds(lastPos?.TIME);
+   const currentDate = new Date();
+   const currentTime = timeToSeconds(currentDate.toTimeString().slice(0,8))
+   console.log(currentTime);
+   console.log(lastPos) 
+   if(lastPos.SPEED>0)
+       setStatus("Running")
+   else if(lastPos.ENGINE_RPM>650 && lastPos.IGNITION===1.000000)
+       setStatus("Cranked & Halted")
+   else if(lastPos.ENGINE_RPM<=650 && lastPos.IGNITION===1.000000)
+       setStatus("Ignition On")
+   else
+   setStatus("Stopped");
+   }
 }
- else{
- setStatus("Stopped")
- console.log("stopped")
- }
- }
- else{
- setStatus("Stopped")
- console.log("Stopped 1")
- }
- }
 
  React.useEffect(() => {
  console.log("i m in")
