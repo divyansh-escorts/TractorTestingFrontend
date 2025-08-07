@@ -397,8 +397,8 @@ try {
  ];
 
  allData.push(...updatedData)
- setLat(parseFloat(data.LATITUDE))
- setLong(parseFloat(data.LONGITUDE))
+ setLat(parseFloat(calculateDecimal(data.LATITUDE)))
+ setLong(parseFloat(calculateDecimal(data.LONGITUDE)))
  console.log(data.SPEED)
  console.log(typeof data.SPEED)
  setSpeed(parseFloat(data.SPEED))
