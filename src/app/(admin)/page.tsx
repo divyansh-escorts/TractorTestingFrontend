@@ -74,10 +74,9 @@ export default function Dashboard() {
 
  const rows = [
  createData(1, 'FT 45','EKL_02', 'HR 51 TC 2004/45/25','03/04/25',`${totalHMR}`,`${totalDistance}`, `${todayDistance}`, `${status}`,"yes"),
- createData(2, 'FT 45','EKL_03', 'Not Known','04/08/25',`${totalHMR1}`,`${totalDistance1}`, `${todayDistance1}`, `${status1}`,"yes"),
- createData(3, 'FT 6065','EKL_999', 'HR 53 TC 2004/45/311','-','0','0', '0', 'Stopped','no'),
- createData(4, 'FT 6065','EKL_999', 'HR 51 TC 2004/45/330', '-','0','0','0' ,'Stopped','no'),
- createData(5, 'FT 6065','EKL_999', 'N/A', '-','0','0','0' ,'Stopped','no'),
+ createData(2, 'FT 6065','EKL_03', 'HR 53 TC 2004/45/311','04/08/25',`${totalHMR1}`,`${totalDistance1}`, `${todayDistance1}`, `${status1}`,"yes"),
+ createData(3, 'FT 6065','EKL_999', 'HR 51 TC 2004/45/330', '-','0','0','0' ,'Stopped','no'),
+ createData(4, 'FT 6065','EKL_999', 'N/A', '-','0','0','0' ,'Stopped','no'),
  ];
  function addTimeToCurrentTime(currentTime:string) {
  const additionalTime = "5:30"
